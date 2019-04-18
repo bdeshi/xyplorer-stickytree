@@ -147,6 +147,15 @@ While True
 WEnd
 Exit
 
+Func ExitApp()
+  ; detach thread input
+  If $gThreadAttached Then
+    _WinAPI_AttachThreadInput($gMyThread, $gXyThread, False)
+  EndIf
+  SendData('::unset $P_STICKYTREE_TOGGLE;')
+  Exit
+EndFunc   ;==>ExitApp
+
 Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
   #cs received data
     Toggle=0,Pane=1,P1Height=251,P2Height=308,SBHeight=24,BCHeight=23,TBHeight=23,
@@ -200,16 +209,6 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
   SendData($execScript)
   Return True
 EndFunc   ;==>ProcessReceivedData
-
-
-Func ExitApp()
-  ; detach thread input
-  If $gThreadAttached Then
-    _WinAPI_AttachThreadInput($gMyThread, $gXyThread, False)
-  EndIf
-  SendData('::unset $P_STICKYTREE_TOGGLE;')
-  Exit
-EndFunc   ;==>ExitApp
 
 Func LayoutStrToArray($layoutStr)  ;==> Converts layout info in $gReceivedData to a hashmap
   Local $mLayout[], $sKey, $sValue

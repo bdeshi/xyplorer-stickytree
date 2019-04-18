@@ -1,17 +1,19 @@
 /*
   stickytree.xys
   Makes the tree stick to active pane in dual pane mode.
-  https://www.xyplorer.com/xyfc/viewtopic.php?f=7&t=
+  https://www.xyplorer.com/xyfc/viewtopic.php?f=7&t=20154
 */
   perm $P_STICKYTREE_TOGGLE;
-  $ctb = get('Trigger', 'ctbindex');
+  $ctb = get('trigger', 'ctbindex');
   if ($P_STICKYTREE_TOGGLE != 1) {
     $P_STICKYTREE_TOGGLE = 1;
     $StickyTreeExec = isset($P_STICKYTREE_EXEC) ? 
       $P_STICKYTREE_EXEC : "<xyscripts>\stickytree\stickytree.exe";
     run """$StickyTreeExec"" <hwnd>",, 0, 0;
-    if ($ctb > -1) { ctbstate(1, $ctb); }
-    if !(ctbicon(, $ctb)) { ctbicon($StickyTreeExec, $ctb); }
+    if ($ctb > -1) {
+      ctbstate(1, $ctb);
+      if !(ctbicon(, $ctb)) { ctbicon($StickyTreeExec, $ctb); }
+    }
   } else {
     $P_STICKYTREE_TOGGLE = 0;
     if ($ctb > -1) { ctbstate(0, $ctb); }

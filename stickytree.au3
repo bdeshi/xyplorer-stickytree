@@ -5,18 +5,18 @@
   Called from XYplorer as: stickytree.au3 <xyhwnd> [$ctbindex]
   Required AutoIt version: at least Beta 3.3.15.1
 #ce
-#cs icon terms or use
+#cs icon terms of use
   The stickytree.ico file is generated from the bamboo.png icon of
   FatCow's "farm-fresh" iconset: http://www.fatcow.com/free-icons.
   Licensed under a Creative Commons Attribution 3.0 license.
-#ce icon terms or use
+#ce icon terms of use
 
 #Region AutoIt3Wrapper directives section
   #AutoIt3Wrapper_Version=B
   #AutoIt3Wrapper_Icon=stickytree.ico
   #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
   #AutoIt3Wrapper_Compression=4
-  #AutoIt3Wrapper_Res_Fileversion=0.9.9.8
+  #AutoIt3Wrapper_Res_Fileversion=0.9.9.9
   #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=P
   #AutoIt3Wrapper_Res_Fileversion_First_Increment=Y
   #AutoIt3Wrapper_Run_Tidy=Y
@@ -35,11 +35,12 @@
 #NoTrayIcon
 
 If $CmdLine[0] < 1 Then Exit
-; ==> config
+; ==> config TODO: make GUI control panel
 Global $gHorizontalListPosition = 0 ; Default position of list in horizontal split
 Global $gVerticalListCenter = 0 ; autocenter panes in vertical split
 Global $gEqualizeNavWidth = 1 ; set equal left and right navpanel widths
-; ==> config
+Global $gRestoreLayout = 1 ; on quit, restore layout to as it was before starting
+; ==> config TODO: make GUI control panel
 
 Global $gReceivedData = ''
 Global $gReceivedDataLast = ''
@@ -180,6 +181,7 @@ Func XyReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get data from XY via WM
     Local $dataSize = DllStructGetData($copyDataStruct, 'cbData') / 2
     Local $dataStruct = DllStructCreate('wchar data[' & $dataSize & ']', $lpData)
     $gReceivedData = DllStructGetData($dataStruct, 'data')
+    If ($dataSize = 0) Then $gReceivedData = ''
   EndIf
   Return True
 EndFunc   ;==>XyReceiveData

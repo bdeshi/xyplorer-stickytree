@@ -50,7 +50,7 @@ Global $gReceivedDataLast = ''
 Global Const $gXyHandle = HWnd(Int($CmdLine[1]))
 Global Const $gXyPID = WinGetProcess($gXyHandle)
 Global Const $gMyHandle = GUICreate('XYplorerStickyTree')
-GUIRegisterMsg($WM_COPYDATA, 'XyReceiveData') ; Au3Stripper Point of Concern
+GUIRegisterMsg($WM_COPYDATA, 'ReceiveData') ; Au3Stripper Point of Concern
 GUISetState(@SW_HIDE, $gMyHandle)
 Global Const $gGetLayoutScript = '::' & _
     'copydata ' & $gMyHandle & ', "' & _
@@ -73,7 +73,7 @@ While True
   Sleep(500)
   WinWaitActive($gXyHandle)
   If Not TooltipShowing() And Not InfotipShowing() Then
-    XySendData($gGetLayoutScript)
+    SendData($gGetLayoutScript)
     If ($gReceivedData <> $gReceivedDataLast) Then
       ProcessReceivedData()
     EndIf
@@ -136,13 +136,13 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
     EndIf
   EndIf
   $execScript &= '");'
-  XySendData($execScript)
+  SendData($execScript)
   Return True
 EndFunc   ;==>ProcessReceivedData
 
 Func ExitApp()
   ; reset layout
-  XySendData('::unset $P_STICKYTREE_TOGGLE;')
+  SendData('::unset $P_STICKYTREE_TOGGLE;')
   Exit
 EndFunc   ;==>ExitApp
 
@@ -163,7 +163,7 @@ EndFunc   ;==>LayoutStrToArray
     PVOID     lpData; // Pointer to The data to be passed to the receiving application.
   } COPYDATASTRUCT, *PCOPYDATASTRUCT;
 #ce
-Func XySendData($data) ;==> send data to XY via WM_COPYDATA
+Func SendData($data) ;==> send WM_COPYDATA to Xy
   Local $dwData = 0x00400001   ; copydata mode 1: execute data as script
   Local $dataSize = StringLen($data)
   Local $dataStruct = DllStructCreate('wchar data[' & $dataSize & ']')
@@ -174,10 +174,9 @@ Func XySendData($data) ;==> send data to XY via WM_COPYDATA
   DllStructSetData($copyDataStruct, 'lpData', DllStructGetPtr($dataStruct))
   _SendMessage($gXyHandle, $WM_COPYDATA, $gMyHandle, DllStructGetPtr($copyDataStruct))
   Return True
-EndFunc   ;==>XySendData
+EndFunc   ;==>SendData
 
-Func XyReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get data from XY via WM_COPYDATA
-  $gReceivedDataLast = $gReceivedData
+Func ReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get WM_COPYDATA from Xy
   If ($wParam = $gXyHandle) Then
     Local $copyDataStruct = DllStructCreate('dword dwData;dword cbData;ptr lpData', $lParam)
     Local $lpData = DllStructGetData($copyDataStruct, 'lpData')
@@ -187,7 +186,7 @@ Func XyReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get data from XY via WM
     If ($dataSize = 0) Then $gReceivedData = ''
   EndIf
   Return True
-EndFunc   ;==>XyReceiveData
+EndFunc   ;==>ReceiveData
 
 Func CollectTooltips() ;==> collect XYplorer's child tooltip hWnds
   Local $aCollection = [0]

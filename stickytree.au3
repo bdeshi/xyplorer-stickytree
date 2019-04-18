@@ -34,7 +34,7 @@
 #include <WinAPIProc.au3>
 #include <StringConstants.au3>
 
-#NoTrayIcon
+; #NoTrayIcon
 Opt("WinWaitDelay", 10)
 
 If $CmdLine[0] < 1 Then Exit

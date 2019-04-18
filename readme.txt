@@ -1,0 +1,42 @@
+Sticky Tree: Makes the tree panel follow active pane. An alternative to dual trees.
+
+
+INSTALL
+
+This is a combination of an external script written in AutoIt3, and a launcher script written in XYscript.
+
+    * download the attached stickytree.zip. the archive contains:
+
+        stickytree.exe: the stickytree executable
+        stickytree.au3: The source autoit3 script
+        stickytree.xys: the xyscript loader
+        stickytree.ico: an icon that can be used in a ctb.
+
+    * extract the archive contents to <xyscripts>\stickytree\.
+    * make sure Dual Pane view is enabled.
+    * that's it, all set! now you can just execute the XYScript to start sticky tree.
+    * rerun the xyscript or disable Dual Pane view to stop.
+
+    
+INSTALL CTB
+
+    * the XYScript is fully set up to be used as a ctb. Just set the following statement
+      as both left- and right-click scripts of a ctb:
+         load "<xyscripts>\stickytree\stickytree.xys",,'f'; // adjust path if necessary.
+    * and done! the script will take care of ctb icon and caption as well.
+    * left-click will toggle sticky tree. Right-click will show a config menu.
+
+
+NOTES
+
+    * The preferred method of stopping is to disable Dual Panes view, or to run:
+        copydata $P_STICKYTREE_HWND, "QUIT", 0;
+    * the perm variable $P_STICKYTREE_PATH can control the path to the exe and the ini config.
+        perm $P_STICKYTREE_EXEC = 'path\to\autoit\beta\autoit.exe path\to\stickytree.au3';
+    * the permavar $P_STICKYTREE_EXEC can define the command for the executable script.
+      this allows for running the source au3 script directly with the autoit interpreter.
+      AutoIt3 version must be >= v3.3.15.1.
+    * both permavars can contain single-quoted variable path for portable path-keeping. Eg,
+        perm $P_STICKYTREE_PATH = '<xyscripts>\_ext\stickytree';
+    * if the script doesn't start, unset the following permavars and retry:
+        $P_STICKYTREE_TOGGLE, $P_STICKYTREE_HWND

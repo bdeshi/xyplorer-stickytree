@@ -1,17 +1,154 @@
 /*
   stickytree.xys
   Makes the tree stick to active pane in dual pane mode.
+  this is the ctb loader for stickytree.exe/stickytree.au3
   https://www.xyplorer.com/xyfc/viewtopic.php?f=7&t=20154
+
+** Define the icon and caption in $ico and $cap within "_Initialize".
+** Set this snippet as *both* LClick & RClick script:
+**     ::load 'path\to\this\script.xys',, 'f';
+** Done.
+** add additional left- and right-click subscript in $lc and $rc.
 */
+
+
+"_Initialize"
+
+  // icon and caption
+  $ico = isset($P_STICKYTREE_PATH)
+    ? "$P_STICKYTREE_PATH\stickytree.ico"
+    : "<xyscripts>\stickytree\stickytree.ico";
+  $cap = "LClick: Toggle Sticky Tree<crlf>RClick:Configure Sticky Tree";
+
+  $lc  = '_lclick'; // left-click   scripts label(s) ;-separated
+  $rc  = '_rclick'; // rights-click scripts label(s) ;-separated
+
+  if (get('trigger', 'ctbindex') > 1) {
+    if !(ctbicon()){ctbicon($ico);}
+    ctbname($cap);
+  }
+
+  if     (get('trigger')==1){load '*', $lc, 's';}
+  elseif (get('trigger')==2){load '*', $rc, 's';}
+
+"-" eval(); /* this stops the "no visible scripts" error. */
+
+/* == LCLICK ======================================================== */
+
+"toggle : _lclick"
+  // to call the au3 source instead of the compiled exe:
+  // perm $P_STICKYTREE_EXEC = '<xypath>\..\autoit\beta\autoit3.exe <xyscripts>\_ext\stickytree\stickytree.au3';
+  // note the single quotes. variables in path are resolved when reading.
+  // This was the permavar can contain portable paths.
+
   perm $P_STICKYTREE_TOGGLE;
   $ctb = get('trigger', 'ctbindex');
   if ($P_STICKYTREE_TOGGLE != 1) {
+    unset $P_STICKYTREE_HWND;
     $P_STICKYTREE_TOGGLE = 1;
-    $StickyTreeExec = isset($P_STICKYTREE_EXEC) ? 
-      $P_STICKYTREE_EXEC : "<xyscripts>\stickytree\stickytree.exe";
+    $StickyTreeExec = isset($P_STICKYTREE_EXEC)
+      ? $P_STICKYTREE_EXEC
+      : isset($P_STICKYTREE_PATH)
+        ? "$P_STICKYTREE_PATH\stickytree.exe"
+        : "<xyscripts>\stickytree\stickytree.exe";
+ 
+    $StickyTreeExec = $StickyTreeExec, 'r';
     $StickyTreeExec = $StickyTreeExec, 'r';
     run "$StickyTreeExec <hwnd> $ctb",, 0, 0; // $ctb arg is optional
   } else {
-    $P_STICKYTREE_TOGGLE = 0;
-    if ($ctb > -1) { ctbstate(0, $ctb); }
+    if isset($P_STICKYTREE_HWND) {
+      copydata $P_STICKYTREE_HWND, "QUIT", 0;
+    }
+    sub "_clear";
+  }
+
+
+/* == RCLICK ======================================================== */
+
+"options : _rclick_old"
+  $ini = isset($P_STICKYTREE_PATH)
+    ? "$P_STICKYTREE_PATH\stickytree.ini"
+    : "<xyscripts>\stickytree\stickytree.ini";
+  $ini = $ini, 'r';
+  $ini = $ini, 'r';
+  
+  if (get('SHIFT') == 1) {
+    open "$ini";
+  }
+  if ($P_STICKYTREE_TOGGLE == 1) && isset($P_STICKYTREE_HWND) {
+    copydata $P_STICKYTREE_HWND, "CONF", 0;
+    status "StickyTree:Settings Updated From Ini",, "ready";
+  } else {
+    sub "_clear";
+  }
+
+"niceoptions : _rclick"
+  $ini = isset($P_STICKYTREE_PATH)
+    ? "$P_STICKYTREE_PATH\stickytree.ini"
+    : "<xyscripts>\stickytree\stickytree.ini";
+  $ini = $ini, 'r';
+  $ini = $ini, 'r';
+  
+  /* I. AM. SORRY. FOR. THIS. MESS. */
+
+  global $HorizontalListAlign = getkey("HorizontalListAlign", "Config", $ini);
+  global $VerticalListCenter = getkey("VerticalListCenter", "Config", $ini);
+  global $AutoDualPane = getkey("AutoDualPane", "Config", $ini);
+  global $RestoreLayout = getkey("RestoreLayout", "Config", $ini);
+  global $RestorePanes = getkey("RestorePanes", "Config", $ini);
+
+  $HorizontalListAlign = $HorizontalListAlign != "" ? $HorizontalListAlign : -1;
+  $VerticalListCenter = $VerticalListCenter != "" ? $VerticalListCenter : 1;
+  $AutoDualPane = $AutoDualPane != "" ? $AutoDualPane : 1;
+  $RestoreLayout = $RestoreLayout != "" ? $RestoreLayout : 1;
+  $RestorePanes = $RestorePanes != "" ? $RestorePanes : 1;
+
+  $menu_vertlist_state       = $VerticalListCenter==1 ? 2 : '';
+  $menu_vertlist_cmd         = 'global $VerticalListCenter='.!$VerticalListCenter;
+  $menu_horizlist_1_state    = $HorizontalListAlign==0 ? 2 : '';
+  $menu_horizlist_1_cmd      = 'global $HorizontalListAlign=0';
+  $menu_horizlist_2_state    = $HorizontalListAlign==1 ? 2 : '';
+  $menu_horizlist_2_cmd      = 'global $HorizontalListAlign=1';
+  $menu_horizlist_3_state    = $HorizontalListAlign==-1 ? 2 : '';
+  $menu_horizlist_3_cmd      = 'global $HorizontalListAlign=-1';
+  $menu_autodp_state         = $AutoDualPane==1 ? 2 : '';
+  $menu_autodp_cmd           = 'global $AutoDualPane=1;';
+  $menu_restore_layout_state = $RestoreLayout==1 ? 2 : '';
+  $menu_restore_layout_cmd   = 'global $RestoreLayout='.!$RestoreLayout;
+  $menu_restore_pane_state   = $RestorePanes==1 ? 2 : '';
+  $menu_restore_pane_cmd     = 'global $RestorePanes='.!$Restorepanes;
+
+  $menu = regexreplace(<<<#>>
+  "Sticky Tree Settings||1|" end 1;
+  "-"
+  "&Center List Vertically|:dpv|$menu_vertlist_state|" $menu_vertlist_cmd
+  "Align &Horizontal List|:dph||"
+  "&Left||$menu_horizlist_1_state|+1" $menu_horizlist_1_cmd
+  "&Right||$menu_horizlist_2_state|+1" $menu_horizlist_2_cmd
+  "&Manual||$menu_horizlist_3_state|+1" $menu_horizlist_3_cmd
+  "Auto &Dual Panes|:dp2|$menu_autodp_state|" $menu_autodp_cmd
+  "&Restore...|:autorefresh||"
+  "&Layout||$menu_restore_layout_state|+1" $menu_restore_layout_cmd
+  "&Pane sizes||$menu_restore_pane_state|+1" $menu_restore_pane_cmd
+  "&Open configuration|*.ini||" open "$ini"
+  #>>, '^\s+', '');
+  load $menu,, 's';
+
+  setkey $HorizontalListAlign, "HorizontalListAlign", "Config", $ini;
+  setkey $VerticalListCenter, "VerticalListCenter", "Config", $ini;
+  setkey $AutoDualPane, "AutoDualPane", "Config", $ini;
+  setkey $RestoreLayout, "RestoreLayout", "Config", $ini;
+  setkey $RestorePanes, "RestorePanes", "Config", $ini;
+
+  if ($P_STICKYTREE_TOGGLE == 1) && isset($P_STICKYTREE_HWND) {
+    copydata $P_STICKYTREE_HWND, "CONF", 0;
+    status "StickyTree:Settings Updated From Ini",, "ready";
+  } else {
+    sub "_clear";
+  }
+
+" : _clear"
+  unset $P_STICKYTREE_TOGGLE, $P_STICKYTREE_HWND;
+  if (get('trigger', 'ctbindex') > 1) {
+    ctbstate(0);
   }

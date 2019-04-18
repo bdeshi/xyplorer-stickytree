@@ -17,7 +17,7 @@
   #AutoIt3Wrapper_Compression=4
   #AutoIt3Wrapper_UseX64=n
   #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
-  #AutoIt3Wrapper_Res_Fileversion=1.0.0.0
+  #AutoIt3Wrapper_Res_Fileversion=1.0.1.0
   #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=P
   #AutoIt3Wrapper_Res_Fileversion_First_Increment=Y
   #AutoIt3Wrapper_AU3Check_Parameters=-d -w 4 -w 5 -w 6
@@ -38,14 +38,6 @@
 Opt("WinWaitDelay", 10)
 
 If $CmdLine[0] < 1 Then Exit
-
-; ==> config TODO: make GUI control panel
-Global $gHorizontalListPosition = 0 ; Default position of list in horizontal split
-Global $gVerticalListCenter = 0 ; autocenter panes in vertical split
-Global $gEqualizeNavWidth = 1 ; set equal left and right navpanel widths
-Global $gRestoreLayout = 1 ; on quit, restore layout to as it was before starting
-; ==> config TODO: make GUI control panel
-
 Global Const $gXyHandle = HWnd(Int($CmdLine[1]))
 Global Const $gCTBIndex = $CmdLine[0] > 1 ? Int($CmdLine[2]) : -1
 Global Const $gMyHandle = GUICreate('XYplorerStickyTree')
@@ -71,6 +63,7 @@ Global Const $gGetLayoutScript = "::copydata " & $gMyHandle & ', "' & _
     "TBHeight="" . gettoken(controlposition('TAB 1'), 4, '|') . "","" . " & _
     "setlayout(), 0;"
 Global $gReceivedData = Null
+Global $gLastLayout = Null
 Global $_ = Null
 
 #cs
@@ -83,6 +76,10 @@ Global Const $gMyThread = _WinAPI_GetCurrentThreadId()
 Global Const $gThreadAttached = _WinAPI_AttachThreadInput($gMyThread, $gXyThread, True)
 If Not $gThreadAttached Then Exit
 
+; read config
+Global $gHorizontalListAlign, $gVerticalListCenter, $gRestoreLayout, $gRestorePanes
+GetConfig()
+
 ; make sure only one copy is running
 SendReceive("::copydata " & $gMyHandle & ", isset($P_STICKYTREE_HWND), 0;")
 If Int($gReceivedData) Then Exit
@@ -91,13 +88,21 @@ If Int($gReceivedData) Then Exit
 SendReceive("::copydata " & $gMyHandle & ", get('#800'), 0;")
 If Not Int($gReceivedData) Then Exit
 
+; push own hwnd to xy permavar
+SendData("::perm $P_STICKYTREE_HWND=" & $gMyHandle & ";")
+
 ; toggle ctb state
 If $gCTBIndex > -1 Then
   SendData("::ctbstate(1," & $gCTBIndex & ");")
 EndIf
 
+; store layout for restoring
+$gLastLayout = StoreLayout()
+
 ; get classname of AB, for avoiding AB dropdown interruption
-SendReceive("::copydata " & $gMyHandle & ', setlayout(), 0;')
+If Not $gRestoreLayout Then
+  SendReceive("::copydata " & $gMyHandle & ', setlayout(), 0;')
+EndIf
 If StringInStr($gReceivedData, 'ShowAddressbar=1') Then
   SendData("::focus 'A';")
   $_ = ControlGetFocus($gXyHandle)
@@ -166,7 +171,7 @@ WEnd
 Exit
 
 Func ExitApp()
-  Local $execScript = '::unset $P_STICKYTREE_TOGGLE;'
+  Local $execScript = '::unset $P_STICKYTREE_TOGGLE,$P_STICKYTREE_HWND;'
   ; detach thread input
   If $gThreadAttached Then
     _WinAPI_AttachThreadInput($gMyThread, $gXyThread, False)
@@ -174,6 +179,30 @@ Func ExitApp()
   ; unset relevant ctbstate (if any)
   If $gCTBIndex > -1 Then
     $execScript &= 'ctbstate(0,' & $gCTBIndex & ');'
+  EndIf
+  ; restore layout
+  If $gRestoreLayout And $gLastLayout <> Null Then
+    $execScript &= "" & _
+        'setlayout("' & _
+        ',ListPosition=' & $gLastLayout['ListPosition'] & _
+        ',ShowNav=' & $gLastLayout['ShowNav'] & _
+        ',ShowCatalog=' & $gLastLayout['ShowCatalog'] & _
+        ',ShowTree=' & $gLastLayout['ShowTree'] & _
+        ',TreeCatalogStacked=' & $gLastLayout['TreeCatalogStacked'] & _
+        ',CatalogFirst=' & $gLastLayout['CatalogFirst'] & _
+        ',NavWidthLeft=' & $gLastLayout['NavWidthLeft'] & _
+        ',NavWidthRight=' & $gLastLayout['NavWidthRight'] & _
+        ',CatalogWidth=' & $gLastLayout['CatalogWidth'] & _
+        ',CatalogHeight=' & $gLastLayout['CatalogHeight'] & _
+        ',PreviewPaneWidth=' & $gLastLayout['PreviewPaneWidth'] & _
+        (Not $gRestorePanes ? '' : _
+        ',DPHorizontal=' & $gLastLayout['DPHorizontal'] & _
+        ',Pane1Width=' & $gLastLayout['Pane1Width'] & _
+        ',Pane2Width=' & $gLastLayout['Pane2Width'] & _
+        ',Pane1Height=' & $gLastLayout['Pane1Height'] & _
+        ',Pane2Height=' & $gLastLayout['Pane2Height'] _
+        ) & _
+        '");'
   EndIf
   SendData($execScript)
   Exit
@@ -194,16 +223,24 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
   $gReceivedData = Null
   ; note: $gActivePane seems more reliable than $layout['Pane']
 
-  If $layout['DP'] = 0 Or $layout['Toggle'] <> 1 Then ExitApp()
+  If $layout['DP'] = 0 Or $layout['Toggle'] <> 1 Then
+    ; Don't restore DP state
+    If $gRestoreLayout And $gLastLayout <> Null Then
+      $gLastLayout['DP'] = $layout['DP']
+    EndIf
+    ExitApp()
+  EndIf
   Local $execScript = "::setlayout('"
   $execScript &= 'ShowTree=1,ShowNav=1,'
 
   ; ==== horizontal tabs ====
   If $layout['DPHorizontal'] = 1 Then
     $execScript &= 'TreeCatalogStacked=1,ShowCatalog=1,'
-    If $layout['ListPosition'] = 1 Then
-      $execScript &= 'ListPosition=' & $gHorizontalListAlign & ','
+    Local $listPosition = $layout['ListPosition'] = 1 ? 0 : $layout['ListPosition']
+    If $gHorizontalListAlign >= 0 Then
+      $listPosition = $gHorizontalListAlign = 0 ? 2 : 0
     EndIf
+    $execScript &= 'ListPosition=' & $listPosition & ','
     Local $catFirst, $catHeight
     If $gActivePane = 1 Then
       $catFirst = 0
@@ -218,14 +255,19 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
 
     ; ===== vertical tabs =====
   Else
-    If $layout['TreeCatalogStacked'] = 0 Then
-      $execScript &= 'ListPosition=1,'
-      $layout['ListPosition'] = 1
-    EndIf
-    If $layout['ListPosition'] = 1 Then
+    If $gVerticalListCenter Then
+      $execScript &= 'TreeCatalogStacked=0,ListPosition=1,'
       $execScript &= 'CatalogFirst=' & (($gActivePane = 1) ? 0 : 1) & ','
     Else
-      $execScript &= 'TreeCatalogStacked=1,ListPosition=' & (($gActivePane = 1) ? 0 : 2) & ','
+      If $layout['TreeCatalogStacked'] = 0 Then
+        $execScript &= 'ListPosition=1,'
+        $layout['ListPosition'] = 1
+      EndIf
+      If $layout['ListPosition'] = 1 Then
+        $execScript &= 'CatalogFirst=' & (($gActivePane = 1) ? 0 : 1) & ','
+      Else
+        $execScript &= 'TreeCatalogStacked=1,ListPosition=' & (($gActivePane = 1) ? 0 : 2) & ','
+      EndIf
     EndIf
   EndIf
   $execScript &= "');"
@@ -242,6 +284,40 @@ Func LayoutStrToArray($layoutStr)  ;==> Converts layout info in $gReceivedData t
   Next
   Return $mLayout
 EndFunc   ;==>LayoutStrToArray
+
+Func GetConfig()  ;==> Get/Update settings from Ini
+  Local $Ini = StringRegExpReplace(@ScriptDir, '[/\\]$', '') & "\stickytree.ini"
+  $gHorizontalListAlign = Int(IniRead($Ini, "Config", "HorizontalListAlign", -1))
+  $gVerticalListCenter = Int(IniRead($Ini, "Config", "VerticalListCenter", 1))
+  $gRestoreLayout = Int(IniRead($Ini, "Config", "RestoreLayout", 1))
+  $gRestorePanes = Int(IniRead($Ini, "Config", "RestorePanes", 1))
+  $gAutoDualPane = Int(IniRead($Ini, "Config", "AutoDualPane", 1))
+  $gPersist = Int(IniRead($Ini, "Config", "Persist", 1)) ; no-op
+  If Not FileExists($Ini) Then
+    Local $hIni = FileOpen($Ini, 2)
+    FileWrite($hIni, _
+        "[Config]" & @CRLF & _
+        "; list position in horizontal split: -1=manual, 0=left, 1=right" & @CRLF & _
+        "HorizontalListAlign=-1" & @CRLF & _
+        "; list position in vertical split: 0=manual, 1=center" & @CRLF & _
+        "VerticalListCenter=1" & @CRLF & _
+        "; restore last layout after stopping: 0=no, 1=yes" & @CRLF & _
+        "RestoreLayout=1" & @CRLF & _
+        "; restore pane split and size as well: 0=no, 1=yes" & @CRLF & _
+        "RestorePanes=1" & @CRLF & _
+        "; activate dual panes if needed: 0=no, 1=yes" & @CRLF & _
+        "; also gets disabled at stop if it was auto-enabled." & @CRLF & _
+        "AutoDualPane=1" & @CRLF _
+        )
+    FileClose($hIni)
+  EndIf
+  Return
+EndFunc   ;==>ConfigUpdate
+
+Func StoreLayout()  ;==> remember current layout for restoring
+  SendReceive("::copydata " & $gMyHandle & ', setlayout(), 0;')
+  Return LayoutStrToArray($gReceivedData)
+EndFunc   ;==>StoreLayout
 
 Func GetPaneDim($class)  ;==> Return a hash of pane positions
   If Not WinExists($gXyHandle) Then Exit ; MAGIC to stop orphan process bug. why here? I don't know
@@ -292,5 +368,6 @@ Func ReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get WM_COPYDATA from Xy
     $gReceivedData = DllStructGetData($dataStruct, 'data')
     If ($dataSize = 0) Then $gReceivedData = ''
   EndIf
+  If $gReceivedData = "QUIT" Then ExitApp()
   Return True
 EndFunc   ;==>ReceiveData

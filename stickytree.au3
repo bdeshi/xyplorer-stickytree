@@ -34,7 +34,7 @@
 #include <WinAPIProc.au3>
 #include <StringConstants.au3>
 
-; #NoTrayIcon
+#NoTrayIcon
 Opt("WinWaitDelay", 10)
 
 If $CmdLine[0] < 1 Then Exit
@@ -244,6 +244,7 @@ Func LayoutStrToArray($layoutStr)  ;==> Converts layout info in $gReceivedData t
 EndFunc   ;==>LayoutStrToArray
 
 Func GetPaneDim($class)  ;==> Return a hash of pane positions
+  If Not WinExists($gXyHandle) Then Exit ; MAGIC to stop orphan process bug. why here? I don't know
   Local $sPos = ""
   Local $aPos = ControlGetPos($gXyHandle, '', "[CLASSNN:" & $class & "]")
   For $iData In $aPos
@@ -256,7 +257,7 @@ EndFunc   ;==>GetPaneDim
 Func SendReceive($str)  ;==> Send Data and wait until some data received
   $gReceivedData = Null
   SendData($str)
-  While $gReceivedData = Null
+  While $gReceivedData = Null And WinExists($gXyHandle)
     ContinueLoop
   WEnd
   Return

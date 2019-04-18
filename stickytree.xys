@@ -1,0 +1,72 @@
+"stickytree"
+  assert <xyver> >= "19.60.0109", '<xyver> must be >= 19.60.0109';
+  setlayout('showtree=1,shownav=1');
+  $listposition = getlayout('ListPosition');
+  if !(getlayout('DPHorizontal')) {
+    setlayout('ListPosition=1');  // horiz list looks better centered
+  }
+  // keep list position static by setting navwidth at both side to equal
+  switch getlayout('ListPosition') {
+    case 0:
+      setlayout('NavWidthLeft=' . getlayout('NavWidthRight')); break;
+    case 2:
+      setlayout('NavWidthRight=' . getlayout('NavWidthLeft')); break;
+    case 1:
+      $navleft  = getlayout('NavWidthLeft');
+      $navright = getlayout('NavWidthRight');
+      $navleft  = ($navleft < $navright) ? $navleft : $navright;
+      $navright = $navleft;
+      setlayout("NavWidthLeft=$navleft,NavWidthRight=$navright"); break;
+  }
+
+  // the sticky glue
+  while True {
+    wait 50;
+    assert getlayout('DP') == 1, "can't play with one pane, bud.";
+    $activepane = get('Pane');
+    /*** horizontal panes ***/
+    if getlayout('DPHorizontal') {
+      if (getlayout('ListPosition') == 1) {
+        setlayout('ListPosition=0');  // vert list looks better not centered
+      }
+      setlayout('TreeCatalogStacked=1,ShowCatalog=1');
+      if ($activepane == 1) {
+        setlayout('CatalogFirst=0,CatalogHeight=' .
+          getelementheight('L 2') +
+          (getlayout('InfoPanelWide') ? 0 : getelementheight('SB')) +
+          (getlayout('ShowCrumb') ? getelementheight('BC 1') : 0) +
+          (getlayout('ShowTabs') ? getelementheight('TAB 1') : 0)
+        );
+      } else {
+        setlayout('CatalogFirst=1,CatalogHeight=' .
+          getelementheight('L 1') +
+          (getlayout('ShowCrumb') ? getelementheight('BC 1') : 0) +
+          (getlayout('ShowTabs') ? getelementheight('TAB 1') : 0)
+        );
+      }
+    }
+
+    /*** vertical panes ***/
+    else {
+      if (getlayout('ListPosition') == 1) {
+        setlayout('CatalogFirst=' . ($activepane==1 ? 0 : 1));
+      } else {
+        setlayout('ListPosition=' . ($activepane==1 ? 0 : 2));
+      }
+    }
+  }
+FUNCTION getelementheight($element) {
+  return gettoken(controlposition($element), 4, '|');
+}
+FUNCTION getlayout($elems, $sep='|') {
+  // https://www.xyplorer.com/xyfc/viewtopic.php?t=13822&p=122431#p122431
+  foreach ($elem, $elems, $sep) {
+    if ($elem == '') || (regexmatches($elem,'^\w[\W]') != '') {
+      $ret = (isset($ret) ? $ret : '') . $sep . '' ; //no value for bad elem
+    } else {
+      $val = gettoken(regexmatches(setlayout(), "\b$elem\=\d*", 1), 2, '=');
+      $ret = (isset($ret) ? $ret : '') . $sep . $val;
+    }
+  }
+  return replace($ret, $sep, '',,, 1); //replace first extra $sep
+}

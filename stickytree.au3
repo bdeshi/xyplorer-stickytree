@@ -77,10 +77,9 @@ Global Const $gGetLayoutScript = '::' & _
   InfoPanelHeight=196,InfoPanelHeightJump=0,LiveFilterInStatusBar=0
 #ce received data
 While True
+  If Not WinExists($gXyHandle) Then ExitApp()
   Sleep(10)
-  If WinExists($gXyHandle) = 0 Then
-    ExitApp()
-  EndIf
+  WinWaitActive($gXyHandle)
   XySendData($gGetLayoutScript)
   If ($gReceivedData <> $gReceivedDataLast) Then
     ProcessReceivedData()

@@ -1,5 +1,7 @@
-# ignore scite4autoit3 backups
+# scite4autoit3 backups
 /BackUp/
-# ignore au3stripper generated files
+# au3stripper generated files
 *_stripped.au3
+# scratchpad
+/scratch/
 

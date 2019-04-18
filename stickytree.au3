@@ -33,6 +33,7 @@
 #include <SendMessage.au3>
 #include <StringConstants.au3>
 #NoTrayIcon
+Opt("WinWaitDelay", 10)
 
 If $CmdLine[0] < 1 Then Exit
 ; ==> config TODO: make GUI control panel

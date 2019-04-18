@@ -16,7 +16,7 @@
   #AutoIt3Wrapper_Icon=stickytree.ico
   #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
   #AutoIt3Wrapper_Compression=4
-  #AutoIt3Wrapper_Res_Fileversion=0.9.9.9
+  #AutoIt3Wrapper_Res_Fileversion=0.9.10.0
   #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=P
   #AutoIt3Wrapper_Res_Fileversion_First_Increment=Y
   #AutoIt3Wrapper_Run_Tidy=Y
@@ -28,10 +28,12 @@
   #AutoIt3Wrapper_Au3Check_Parameters=-d -w 3 -w 4 -w 6
 #EndRegion AutoIt3Wrapper directives section
 
-#include <windowsconstants.au3>
+#include <WindowsConstants.au3>
 #include <WinAPISysWin.au3>
 #include <SendMessage.au3>
 #include <StringConstants.au3>
+#include <GuiToolTip.au3>
+#include <Array.au3>
 #NoTrayIcon
 Opt("WinWaitDelay", 10)
 
@@ -46,7 +48,7 @@ Global $gRestoreLayout = 1 ; on quit, restore layout to as it was before startin
 Global $gReceivedData = ''
 Global $gReceivedDataLast = ''
 Global Const $gXyHandle = HWnd(Int($CmdLine[1]))
-; Global Const $gXyPID = WinGetProcess($gXyHandle)
+Global Const $gXyPID = WinGetProcess($gXyHandle)
 Global Const $gMyHandle = GUICreate('XYplorerStickyTree')
 GUIRegisterMsg($WM_COPYDATA, 'XyReceiveData') ; Au3Stripper Point of Concern
 GUISetState(@SW_HIDE, $gMyHandle)
@@ -60,41 +62,42 @@ Global Const $gGetLayoutScript = '::' & _
     'BCHeight=" . gettoken(controlposition(''BC 1''),  4, ''|'') . ",' & _
     'TBHeight=" . gettoken(controlposition(''TAB 1''), 4, ''|'') . ","' & _
     '. setlayout(), 0;'
-
+Global $gXyToolTips = CollectTooltips() ; array of tooltips owned by XYplorer
 #cs disable update when tooltips/hovers are open.
-  match by class + parent_xy_pid
+  match by class + parent_xy_pid/hwnd
   tooltip class:  tooltips_class32
-  hoverbox class: ??
+  hoverbox class: ?? ~ws_child styled children?
 #ce disable update when tooltips/hovers are open.
-
-#cs received data
-  Toggle=0,Pane=1,P1Height=251,P2Height=308,SBHeight=24,BCHeight=23,TBHeight=23,
-  DP=1,DPHorizontal=1,ShowMainMenu=1,ShowAddressbar=1,ShowToolbar=1,ShowTabs=1,
-  ShowCrumb=1,ShowFilter=0,ShowStatusbar=1,ShowStatusbarButtons=1,ShowNav=1,
-  ShowTree=1,ShowCatalog=1,ShowPreviewPane=0,ShowInfoPanel=0,ABTBStacked=1,
-  ToolbarFirst=1,TreeCatalogStacked=0,CatalogFirst=0,ListPosition=0,TabsWide=0,
-  InfoPanelWide=1,NavWidthLeft=154,NavWidthRight=154,CatalogWidth=154,CatalogHeight=297,
-  Pane1Width=456,Pane2Width=560,Pane1Height=246,Pane2Height=207,PreviewPaneWidth=280,
-  InfoPanelHeight=196,InfoPanelHeightJump=0,LiveFilterInStatusBar=0
-#ce received data
 While True
   If Not WinExists($gXyHandle) Then ExitApp()
-  Sleep(10)
+  Sleep(500)
   WinWaitActive($gXyHandle)
-  XySendData($gGetLayoutScript)
-  If ($gReceivedData <> $gReceivedDataLast) Then
-    ProcessReceivedData()
+  If Not TooltipShowing() And Not InfotipShowing() Then
+    XySendData($gGetLayoutScript)
+    If ($gReceivedData <> $gReceivedDataLast) Then
+      ProcessReceivedData()
+    EndIf
   EndIf
 WEnd
 
 Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
+  #cs received data
+    Toggle=0,Pane=1,P1Height=251,P2Height=308,SBHeight=24,BCHeight=23,TBHeight=23,
+    DP=1,DPHorizontal=1,ShowMainMenu=1,ShowAddressbar=1,ShowToolbar=1,ShowTabs=1,
+    ShowCrumb=1,ShowFilter=0,ShowStatusbar=1,ShowStatusbarButtons=1,ShowNav=1,
+    ShowTree=1,ShowCatalog=1,ShowPreviewPane=0,ShowInfoPanel=0,ABTBStacked=1,
+    ToolbarFirst=1,TreeCatalogStacked=0,CatalogFirst=0,ListPosition=0,TabsWide=0,
+    InfoPanelWide=1,NavWidthLeft=154,NavWidthRight=154,CatalogWidth=154,CatalogHeight=297,
+    Pane1Width=456,Pane2Width=560,Pane1Height=246,Pane2Height=207,PreviewPaneWidth=280,
+    InfoPanelHeight=196,InfoPanelHeightJump=0,LiveFilterInStatusBar=0
+  #ce received data
   Local $execScript = '::setlayout("'
   Local $layout = LayoutStrToArray()
-  #cs syntax check fails to detect Assign()-generated vars
+  #cs au3check fails to detect Assign()-generated vars
   For $key In MapKeys($layout)
     Assign($key, $layout[$key], 1)
   Next
-  #ce syntax check fails to detect Assign()-generated vars
+  #ce au3check fails to detect Assign()-generated vars
   If $layout['DP'] = 0 Or $layout['Toggle'] <> 1 Then
     ExitApp()
   Else
@@ -185,3 +188,30 @@ Func XyReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get data from XY via WM
   EndIf
   Return True
 EndFunc   ;==>XyReceiveData
+
+Func CollectTooltips() ;==> collect XYplorer's child tooltip hWnds
+  Local $aCollection = [0]
+  Local $aToolTips = WinList("[CLASS:tooltips_class32]")
+  For $n = 1 To $aToolTips[0][0]
+    Local $hWndToolTip = $aToolTips[$n][1]
+    Local $aToolTip = _GUIToolTip_EnumTools($hWndToolTip, 0)
+    If ($aToolTip[1] = $gXyHandle) Then
+      $aCollection[0] += 1
+      _ArrayAdd($aCollection, $hWndToolTip)
+    EndIf
+  Next
+  Return $aCollection
+EndFunc   ;==>CollectTooltips
+
+Func TooltipShowing() ;==> check if XYplorer tooltips are showing
+  For $n = 1 To $gXyToolTips[0]
+    Local $aToolTip = _GUIToolTip_GetCurrentTool($gXyToolTips[$n])
+    If ($aToolTip[8] <> "") Then Return True
+  Next
+  Return False
+EndFunc   ;==>TooltipShowing
+
+Func InfotipShowing() ;==> check if XYplorer infotips are showing
+  ; TODO
+  Return False
+EndFunc   ;==>InfotipShowing

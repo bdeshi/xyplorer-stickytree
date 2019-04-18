@@ -91,6 +91,23 @@ If Int($gReceivedData) Then Exit
 SendReceive("::copydata " & $gMyHandle & ", get('#800'), 0;")
 If Not Int($gReceivedData) Then Exit
 
+; toggle ctb state
+If $gCTBIndex > -1 Then
+  SendData("::ctbstate(1," & $gCTBIndex & ");")
+EndIf
+
+; get classname of AB, for avoiding AB dropdown interruption
+SendReceive("::copydata " & $gMyHandle & ', setlayout(), 0;')
+If StringInStr($gReceivedData, 'ShowAddressbar=1') Then
+  SendData("::focus 'A';")
+  $_ = ControlGetFocus($gXyHandle)
+Else
+  SendData("::setlayout(ShowAddressbar=1);focus 'A';")
+  $_ = ControlGetFocus($gXyHandle)
+  SendData("::setlayout(ShowAddressbar=0);")
+EndIf
+Global Const $gClassAB = $_
+
 ; store pre-exec pane focus
 SendData("::focus 'L';")
 Global $gClassLastPane = ControlGetFocus($gXyHandle)
@@ -117,7 +134,8 @@ Global $gPaneDim = -1
 While True
   If Not WinExists($gXyHandle) Then Exit
   If Not WinActive($gXyHandle) Then ContinueLoop
-
+  ; polling for focus when AB active interrupts AB dropdown
+  If ControlGetFocus($gXyHandle) = $gClassAB Then ContinueLoop
   $gTriggerUpdate = False
   $gActivePane = 0
   ; activepane is used in layoutupdater so must be always up-do-date
@@ -148,11 +166,16 @@ WEnd
 Exit
 
 Func ExitApp()
+  Local $execScript = '::unset $P_STICKYTREE_TOGGLE;'
   ; detach thread input
   If $gThreadAttached Then
     _WinAPI_AttachThreadInput($gMyThread, $gXyThread, False)
   EndIf
-  SendData('::unset $P_STICKYTREE_TOGGLE;')
+  ; unset relevant ctbstate (if any)
+  If $gCTBIndex > -1 Then
+    $execScript &= 'ctbstate(0,' & $gCTBIndex & ');'
+  EndIf
+  SendData($execScript)
   Exit
 EndFunc   ;==>ExitApp
 

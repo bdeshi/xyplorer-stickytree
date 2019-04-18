@@ -30,8 +30,9 @@
 
 #include <WindowsConstants.au3>
 #include <SendMessage.au3>
+#include <WinAPISysWin.au3>
+#include <WinAPIProc.au3>
 #include <StringConstants.au3>
-#include <Array.au3>
 
 #NoTrayIcon
 Opt("WinWaitDelay", 10)
@@ -70,6 +71,17 @@ Global Const $gGetLayoutScript = "::copydata " & $gMyHandle & ', "' & _
     "TBHeight="" . gettoken(controlposition('TAB 1'), 4, '|') . "","" . " & _
     "setlayout(), 0;"
 Global $gReceivedData = Null
+Global $_ = Null
+
+#cs
+ControlGetFocus() can interfere with [mouse] input
+because it calls AttachThreadInput which resets key state
+So set up AttachThreadInput beforehand
+#ce
+Global Const $gXyThread = _WinAPI_GetWindowThreadProcessId($gXyHandle, $_)
+Global Const $gMyThread = _WinAPI_GetCurrentThreadId()
+Global Const $gThreadAttached = _WinAPI_AttachThreadInput($gMyThread, $gXyThread, True)
+If Not $gThreadAttached Then Exit
 
 ; make sure only one copy is running
 SendReceive("::copydata " & $gMyHandle & ", isset($P_STICKYTREE_HWND), 0;")
@@ -191,6 +203,10 @@ EndFunc   ;==>ProcessReceivedData
 
 
 Func ExitApp()
+  ; detach thread input
+  If $gThreadAttached Then
+    _WinAPI_AttachThreadInput($gMyThread, $gXyThread, False)
+  EndIf
   SendData('::unset $P_STICKYTREE_TOGGLE;')
   Exit
 EndFunc   ;==>ExitApp

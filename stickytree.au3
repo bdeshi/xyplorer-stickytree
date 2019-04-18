@@ -2,8 +2,8 @@
   sticky-tree.au3
   The AutoIt component to the XYplorer Sticky Tree script.
   https://www.xyplorer.com/xyfc/viewtopic.php?f=7&t=20154
-  Called from XYplorer as: stickytree.au3 <xyhwnd> [$ctbindex]
-  Required AutoIt version: at least Beta 3.3.15.1
+  Called from XYplorer as: stickytree.au3 <hwnd> [$ctbindex]
+  Required AutoIt version: >= 3.3.15.1
 #ce
 #cs icon terms of use
   The stickytree.ico file is generated from the bamboo.png icon of
@@ -11,33 +11,33 @@
   Licensed under a Creative Commons Attribution 3.0 license.
 #ce icon terms of use
 
-#Region AutoIt3Wrapper directives section
-  #AutoIt3Wrapper_Version=B
+#Region ; AutoIt3Wrapper directives section
+  #AutoIt3Wrapper_Version=Beta
   #AutoIt3Wrapper_Icon=stickytree.ico
-  #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
   #AutoIt3Wrapper_Compression=4
-  #AutoIt3Wrapper_Res_Fileversion=0.9.10.0
-  #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=P
+  #AutoIt3Wrapper_UseX64=n
+  #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
+  #AutoIt3Wrapper_Res_Fileversion=1.0.0.0
+  #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=P
   #AutoIt3Wrapper_Res_Fileversion_First_Increment=Y
+  #AutoIt3Wrapper_AU3Check_Parameters=-d -w 4 -w 5 -w 6
   #AutoIt3Wrapper_Run_Tidy=Y
   #Tidy_Parameters=/tc 2 /ri /reel
-  ; Au3Stripper Settings
   #AutoIt3Wrapper_Run_Au3Stripper=Y
   #Au3Stripper_Parameters=/pe /so /rm /Beta
   #AutoIt3Wrapper_Au3stripper_OnError=S
-  #AutoIt3Wrapper_Au3Check_Parameters=-d -w 3 -w 4 -w 6
-#EndRegion AutoIt3Wrapper directives section
+#EndRegion ; AutoIt3Wrapper directives section
 
 #include <WindowsConstants.au3>
-#include <WinAPISysWin.au3>
 #include <SendMessage.au3>
 #include <StringConstants.au3>
-#include <GuiToolTip.au3>
 #include <Array.au3>
+
 #NoTrayIcon
 Opt("WinWaitDelay", 10)
 
 If $CmdLine[0] < 1 Then Exit
+
 ; ==> config TODO: make GUI control panel
 Global $gHorizontalListPosition = 0 ; Default position of list in horizontal split
 Global $gVerticalListCenter = 0 ; autocenter panes in vertical split
@@ -45,40 +45,95 @@ Global $gEqualizeNavWidth = 1 ; set equal left and right navpanel widths
 Global $gRestoreLayout = 1 ; on quit, restore layout to as it was before starting
 ; ==> config TODO: make GUI control panel
 
-Global $gReceivedData = ''
-Global $gReceivedDataLast = ''
 Global Const $gXyHandle = HWnd(Int($CmdLine[1]))
-Global Const $gXyPID = WinGetProcess($gXyHandle)
+Global Const $gCTBIndex = $CmdLine[0] > 1 ? Int($CmdLine[2]) : -1
 Global Const $gMyHandle = GUICreate('XYplorerStickyTree')
-GUIRegisterMsg($WM_COPYDATA, 'ReceiveData') ; Au3Stripper Point of Concern
+GUIRegisterMsg($WM_COPYDATA, 'ReceiveData')  ; au3stripper point of concern
 GUISetState(@SW_HIDE, $gMyHandle)
-Global Const $gGetLayoutScript = '::' & _
-    'copydata ' & $gMyHandle & ', "' & _
-    'Toggle=$P_STICKYTREE_TOGGLE,' & _
-    'Pane=" . get(''Pane'') . ",' & _
-    'P1Height=" . gettoken(controlposition(''L 1''),   4, ''|'') . ",' & _
-    'P2Height=" . gettoken(controlposition(''L 2''),   4, ''|'') . ",' & _
-    'SBHeight=" . gettoken(controlposition(''SB''),    4, ''|'') . ",' & _
-    'BCHeight=" . gettoken(controlposition(''BC 1''),  4, ''|'') . ",' & _
-    'TBHeight=" . gettoken(controlposition(''TAB 1''), 4, ''|'') . ","' & _
-    '. setlayout(), 0;'
-Global $gXyToolTips = CollectTooltips() ; array of tooltips owned by XYplorer
-#cs disable update when tooltips/hovers are open.
-  match by class + parent_xy_pid/hwnd
-  tooltip class:  tooltips_class32
-  hoverbox class: ?? ~ws_child styled children?
-#ce disable update when tooltips/hovers are open.
+#cs
+  // setlayout() doesn't return up-to-date sizes, controlposition does.
+  copydata 0x001C068C,
+    "Toggle=$P_STICKYTREE_TOGGLE,Pane=" . get('Pane')
+    . ",P1Height=" . gettoken(controlposition('L 1'),   4, '|')
+    . ",P2Height=" . gettoken(controlposition('L 2'),   4, '|')
+    . ",SBHeight=" . gettoken(controlposition('SB'),    4, '|')
+    . ",BCHeight=" . gettoken(controlposition('BC 1'),  4, '|')
+    . ",TBHeight=" . gettoken(controlposition('TAB 1'), 4, '|')
+    . "," . setlayout(), 0;
+#ce
+Global Const $gGetLayoutScript = "::copydata " & $gMyHandle & ', "' & _
+    "Toggle=$P_STICKYTREE_TOGGLE,Pane="" . get('Pane') . ""," & _
+    "P1Height="" . gettoken(controlposition('L 1'),   4, '|') . ""," & _
+    "P2Height="" . gettoken(controlposition('L 2'),   4, '|') . ""," & _
+    "SBHeight="" . gettoken(controlposition('SB'),    4, '|') . ""," & _
+    "BCHeight="" . gettoken(controlposition('BC 1'),  4, '|') . ""," & _
+    "TBHeight="" . gettoken(controlposition('TAB 1'), 4, '|') . "","" . " & _
+    "setlayout(), 0;"
+Global $gReceivedData = Null
+
+; make sure only one copy is running
+SendReceive("::copydata " & $gMyHandle & ", isset($P_STICKYTREE_HWND), 0;")
+If Int($gReceivedData) Then Exit
+
+; stop if dual pane disabled
+SendReceive("::copydata " & $gMyHandle & ", get('#800'), 0;")
+If Not Int($gReceivedData) Then Exit
+
+; store pre-exec pane focus
+SendData("::focus 'L';")
+Global $gClassLastPane = ControlGetFocus($gXyHandle)
+
+; get classname of pane 1 & pane 2
+SendData("::focus 'P1';")
+Global Const $gClassP1 = ControlGetFocus($gXyHandle)
+SendData("::focus 'P2';")
+Global Const $gClassP2 = ControlGetFocus($gXyHandle)
+
+; restore pre-exec pane focus
+If $gClassLastPane = $gClassP1 Then
+  SendData("::focus 'P1';")
+EndIf
+
+;==> main loop vars
+Global $gTriggerUpdate = False
+Global $gActivePane = 0
+Global $gLastPane = -1
+Global $gLastPaneDim = 0
+Global $gPaneDim = -1
+
+;==> main loop
 While True
-  If Not WinExists($gXyHandle) Then ExitApp()
-  Sleep(500)
-  WinWaitActive($gXyHandle)
-  If Not TooltipShowing() And Not InfotipShowing() Then
-    SendData($gGetLayoutScript)
-    If ($gReceivedData <> $gReceivedDataLast) Then
-      ProcessReceivedData()
+  If Not WinExists($gXyHandle) Then Exit
+  If Not WinActive($gXyHandle) Then ContinueLoop
+
+  $gTriggerUpdate = False
+  $gActivePane = 0
+  ; activepane is used in layoutupdater so must be always up-do-date
+  Switch ControlGetFocus($gXyHandle)
+    Case $gClassP1
+      $gActivePane = 1
+    Case $gClassP2
+      $gActivePane = 2
+  EndSwitch
+  ; update layout on active pane change
+  If $gActivePane > 0 And $gActivePane <> $gLastPane Then
+    $gLastPane = $gActivePane
+    $gTriggerUpdate = True
+  EndIf
+  ; update layout on pane size change
+  If Not $gTriggerUpdate Then
+    $gPaneDim = GetPaneDim($gClassP1) & "," & GetPaneDim($gClassP2)
+    If $gPaneDim <> $gLastPaneDim Then
+      $gLastPaneDim = $gPaneDim
+      $gTriggerUpdate = True
     EndIf
   EndIf
+  If $gTriggerUpdate Then
+    SendReceive($gGetLayoutScript)
+    ProcessReceivedData()
+  EndIf
 WEnd
+Exit
 
 Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
   #cs received data
@@ -91,70 +146,83 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
     Pane1Width=456,Pane2Width=560,Pane1Height=246,Pane2Height=207,PreviewPaneWidth=280,
     InfoPanelHeight=196,InfoPanelHeightJump=0,LiveFilterInStatusBar=0
   #ce received data
-  Local $execScript = '::setlayout("'
-  Local $layout = LayoutStrToArray()
-  #cs au3check fails to detect Assign()-generated vars
-  For $key In MapKeys($layout)
-    Assign($key, $layout[$key], 1)
-  Next
-  #ce au3check fails to detect Assign()-generated vars
-  If $layout['DP'] = 0 Or $layout['Toggle'] <> 1 Then
-    ExitApp()
-  Else
-    $execScript &= 'ShowTree=1,ShowNav=1,'
+  Local $layout = LayoutStrToArray($gReceivedData)
+  $gReceivedData = Null
+  ; note: $gActivePane seems more reliable than $layout['Pane']
 
-    ; ==== horizontal tabs ====
-    If $layout['DPHorizontal'] = 1 Then
-      $execScript &= 'TreeCatalogStacked=1,ShowCatalog=1,'
-      If $layout['ListPosition'] = 1 Then
-        $execScript &= 'ListPosition=' & $gHorizontalListPosition & ','
-      EndIf
-      Local $catFirst, $catHeight
-      If $layout['Pane'] = 1 Then
-        $catFirst = 0
-        $catHeight = $layout['P2Height'] + (($layout['InfoPanelWide'] = 1) ? 0 : $layout['SBHeight'])
-      Else
-        $catFirst = 1
-        $catHeight = $layout['P1Height']
-      EndIf
-      $catHeight += (($layout['ShowCrumb'] = 1) ? $layout['BCHeight'] : 0) + _
-          (($layout['ShowTabs'] = 1) ? $layout['TBHeight'] : 0)
-      $execScript &= 'CatalogFirst=' & $catFirst & ',CatalogHeight=' & $catHeight & ','
+  If $layout['DP'] = 0 Or $layout['Toggle'] <> 1 Then ExitApp()
+  Local $execScript = "::setlayout('"
+  $execScript &= 'ShowTree=1,ShowNav=1,'
 
-      ; ===== vertical tabs =====
+  ; ==== horizontal tabs ====
+  If $layout['DPHorizontal'] = 1 Then
+    $execScript &= 'TreeCatalogStacked=1,ShowCatalog=1,'
+    If $layout['ListPosition'] = 1 Then
+      $execScript &= 'ListPosition=' & $gHorizontalListAlign & ','
+    EndIf
+    Local $catFirst, $catHeight
+    If $gActivePane = 1 Then
+      $catFirst = 0
+      $catHeight = $layout['P2Height'] + (($layout['InfoPanelWide'] = 1) ? 0 : $layout['SBHeight'])
     Else
-      ; allow unstacking
-      If $layout['TreeCatalogStacked'] = 0 Then
-        $execScript &= 'ListPosition=1,'
-        $layout['ListPosition'] = 1
-      EndIf
-      If $layout['ListPosition'] = 1 Then
-        $execScript &= 'CatalogFirst=' & (($layout['Pane'] = 1) ? 0 : 1) & ','
-      Else
-        $execScript &= 'TreeCatalogStacked=1,ListPosition=' & (($layout['Pane'] = 1) ? 0 : 2) & ','
-      EndIf
+      $catFirst = 1
+      $catHeight = $layout['P1Height']
+    EndIf
+    $catHeight += (($layout['ShowCrumb'] = 1) ? $layout['BCHeight'] : 0) + _
+        (($layout['ShowTabs'] = 1) ? $layout['TBHeight'] : 0)
+    $execScript &= 'CatalogFirst=' & $catFirst & ',CatalogHeight=' & $catHeight & ','
+
+    ; ===== vertical tabs =====
+  Else
+    If $layout['TreeCatalogStacked'] = 0 Then
+      $execScript &= 'ListPosition=1,'
+      $layout['ListPosition'] = 1
+    EndIf
+    If $layout['ListPosition'] = 1 Then
+      $execScript &= 'CatalogFirst=' & (($gActivePane = 1) ? 0 : 1) & ','
+    Else
+      $execScript &= 'TreeCatalogStacked=1,ListPosition=' & (($gActivePane = 1) ? 0 : 2) & ','
     EndIf
   EndIf
-  $execScript &= '");'
+  $execScript &= "');"
   SendData($execScript)
   Return True
 EndFunc   ;==>ProcessReceivedData
 
+
 Func ExitApp()
-  ; reset layout
   SendData('::unset $P_STICKYTREE_TOGGLE;')
   Exit
 EndFunc   ;==>ExitApp
 
-Func LayoutStrToArray()  ;==> Converts layout info in $gReceivedData to a hashmap
+Func LayoutStrToArray($layoutStr)  ;==> Converts layout info in $gReceivedData to a hashmap
   Local $mLayout[], $sKey, $sValue
-  For $sProperty In StringSplit($gReceivedData, ",", $STR_NOCOUNT)
+  For $sProperty In StringSplit($layoutStr, ",", $STR_NOCOUNT)
     $sKey = StringSplit($sProperty, "=", $STR_NOCOUNT)[0]
     $sValue = StringSplit($sProperty, "=", $STR_NOCOUNT)[1]
     $mLayout[$sKey] = Int($sValue)
   Next
   Return $mLayout
 EndFunc   ;==>LayoutStrToArray
+
+Func GetPaneDim($class)  ;==> Return a hash of pane positions
+  Local $sPos = ""
+  Local $aPos = ControlGetPos($gXyHandle, '', "[CLASSNN:" & $class & "]")
+  For $iData In $aPos
+    $sPos &= "," & String($iData)
+  Next
+  $sPos = StringTrimLeft($sPos, 1)
+  Return $sPos
+EndFunc   ;==>GetPaneDim
+
+Func SendReceive($str)  ;==> Send Data and wait until some data received
+  $gReceivedData = Null
+  SendData($str)
+  While $gReceivedData = Null
+    ContinueLoop
+  WEnd
+  Return
+EndFunc   ;==>SendReceive
 
 #cs
   typedef struct tagCOPYDATASTRUCT {
@@ -187,30 +255,3 @@ Func ReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get WM_COPYDATA from Xy
   EndIf
   Return True
 EndFunc   ;==>ReceiveData
-
-Func CollectTooltips() ;==> collect XYplorer's child tooltip hWnds
-  Local $aCollection = [0]
-  Local $aToolTips = WinList("[CLASS:tooltips_class32]")
-  For $n = 1 To $aToolTips[0][0]
-    Local $hWndToolTip = $aToolTips[$n][1]
-    Local $aToolTip = _GUIToolTip_EnumTools($hWndToolTip, 0)
-    If ($aToolTip[1] = $gXyHandle) Then
-      $aCollection[0] += 1
-      _ArrayAdd($aCollection, $hWndToolTip)
-    EndIf
-  Next
-  Return $aCollection
-EndFunc   ;==>CollectTooltips
-
-Func TooltipShowing() ;==> check if XYplorer tooltips are showing
-  For $n = 1 To $gXyToolTips[0]
-    Local $aToolTip = _GUIToolTip_GetCurrentTool($gXyToolTips[$n])
-    If ($aToolTip[8] <> "") Then Return True
-  Next
-  Return False
-EndFunc   ;==>TooltipShowing
-
-Func InfotipShowing() ;==> check if XYplorer infotips are showing
-  ; TODO
-  Return False
-EndFunc   ;==>InfotipShowing

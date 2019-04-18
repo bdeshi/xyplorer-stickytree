@@ -1,0 +1,5 @@
+# ignore scite4autoit3 backups
+/BackUp/
+# ignore au3stripper generated files
+*_stripped.au3
+

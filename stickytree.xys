@@ -135,19 +135,16 @@
   #>>, '^\s+', '');
   load $menu,, 's';
 
-  if $ot = 1 {
+  if ($ot == 1) {
     setkey $HorizontalListAlign, "HorizontalListAlign", "Config", $ini;
     setkey $VerticalListCenter, "VerticalListCenter", "Config", $ini;
     setkey $AutoDualPane, "AutoDualPane", "Config", $ini;
     setkey $RestoreLayout, "RestoreLayout", "Config", $ini;
     setkey $RestorePanes, "RestorePanes", "Config", $ini;
-  }
-
-  if ($P_STICKYTREE_TOGGLE == 1) && isset($P_STICKYTREE_HWND) {
-    copydata $P_STICKYTREE_HWND, "CONF", 0;
-    status "StickyTree:Settings Updated From Ini",, "ready";
-  } else {
-    sub "_clear";
+    if ($P_STICKYTREE_TOGGLE == 1) && isset($P_STICKYTREE_HWND) {
+      copydata $P_STICKYTREE_HWND, "CONF", 0;
+      status "StickyTree:Settings Updated From Ini",, "ready";
+    }
   }
 
 " : _clear"

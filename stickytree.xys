@@ -97,12 +97,14 @@
   global $AutoDualPane = getkey("AutoDualPane", "Config", $ini);
   global $RestoreLayout = getkey("RestoreLayout", "Config", $ini);
   global $RestorePanes = getkey("RestorePanes", "Config", $ini);
+  global $Persist = getkey("Persist", "Config", $ini);
 
   $HorizontalListAlign = $HorizontalListAlign != "" ? $HorizontalListAlign : -1;
   $VerticalListCenter = $VerticalListCenter != "" ? $VerticalListCenter : 1;
   $AutoDualPane = $AutoDualPane != "" ? $AutoDualPane : 1;
   $RestoreLayout = $RestoreLayout != "" ? $RestoreLayout : 1;
   $RestorePanes = $RestorePanes != "" ? $RestorePanes : 0;
+  $Persist = $Persist != "" ? $Persist : 0;
 
   $menu_vertlist_state       = $VerticalListCenter==1 ? 2 : '';
   $menu_vertlist_cmd         = 'global $ot=1; global $VerticalListCenter='.!$VerticalListCenter;
@@ -118,6 +120,8 @@
   $menu_restore_layout_cmd   = 'global $ot=1; global $RestoreLayout='.!$RestoreLayout;
   $menu_restore_pane_state   = $RestorePanes==1 ? 2 : '';
   $menu_restore_pane_cmd     = 'global $ot=1; global $RestorePanes='.!$RestorePanes;
+  $menu_persist_state        = $Persist==1 ? 2 : '';
+  $menu_persist_cmd          = 'global $ot=1; global $Persist='.!$Persist;
 
   $menu = regexreplace(<<<#>>
   "Sticky Tree Settings||1|" end 1;
@@ -131,6 +135,7 @@
   "&Restore...|:autorefresh||"
   "&Layout||$menu_restore_layout_state|+1" $menu_restore_layout_cmd
   "&Pane sizes||$menu_restore_pane_state|+1" $menu_restore_pane_cmd
+  "&Persist|:sticky|$menu_persist_state|" $menu_persist_cmd
   "&Open configuration|*.ini||" open "$ini"
   #>>, '^\s+', '');
   load $menu,, 's';
@@ -141,6 +146,7 @@
     setkey $AutoDualPane, "AutoDualPane", "Config", $ini;
     setkey $RestoreLayout, "RestoreLayout", "Config", $ini;
     setkey $RestorePanes, "RestorePanes", "Config", $ini;
+    setkey $Persist, "Persist", "Config", $ini;
     if ($P_STICKYTREE_TOGGLE == 1) && isset($P_STICKYTREE_HWND) {
       copydata $P_STICKYTREE_HWND, "CONF", 0;
       status "StickyTree:Settings Updated From Ini",, "ready";

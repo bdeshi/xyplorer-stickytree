@@ -38,12 +38,12 @@
 Opt("WinWaitDelay", 10)
 
 If $CmdLine[0] < 1 Then Exit
-Global $gInit = False ; marker to tell if pre-main loop steps are done
 Global Const $gXyHandle = HWnd(Int($CmdLine[1]))
 Global Const $gCTBIndex = $CmdLine[0] > 1 ? Int($CmdLine[2]) : -1
 Global Const $gMyHandle = GUICreate('XYplorerStickyTree')
 GUIRegisterMsg($WM_COPYDATA, 'ReceiveData')  ; au3stripper point of concern
 GUISetState(@SW_HIDE, $gMyHandle)
+
 #cs
   // setlayout() doesn't return up-to-date sizes, controlposition does.
   copydata 0x001C068C,
@@ -67,6 +67,10 @@ Global $gReceivedData = Null
 Global $gLastLayout = Null
 Global $_ = Null
 
+; config vars
+Global $gHorizontalListAlign, $gVerticalListCenter, $gRestoreLayout
+Global $gRestorePanes, $gAutoDualPane
+
 #cs
 ControlGetFocus() can interfere with [mouse] input
 because it calls AttachThreadInput which resets key state
@@ -77,14 +81,12 @@ Global Const $gMyThread = _WinAPI_GetCurrentThreadId()
 Global Const $gThreadAttached = _WinAPI_AttachThreadInput($gMyThread, $gXyThread, True)
 If Not $gThreadAttached Then Exit
 
-; read config
-Global $gHorizontalListAlign, $gVerticalListCenter, $gRestoreLayout, $gRestorePanes
-Global $gAutoDualPane
-ConfigUpdate()
-
 ; make sure only one copy is running
 SendReceive("::copydata " & $gMyHandle & ", isset($P_STICKYTREE_HWND), 0;")
 If Int($gReceivedData) Then Exit
+
+; read config
+ConfigUpdate()
 
 ; stop if dual pane disabled
 Global $gDualPaneActivated = False
@@ -106,13 +108,8 @@ If $gCTBIndex > -1 Then
   SendData("::ctbstate(1," & $gCTBIndex & ");")
 EndIf
 
-; store layout for restoring
-$gLastLayout = StoreLayout()
-
 ; get classname of AB, for avoiding AB dropdown interruption
-If Not $gRestoreLayout Then
-  SendReceive("::copydata " & $gMyHandle & ', setlayout(), 0;')
-EndIf
+SendReceive("::copydata " & $gMyHandle & ', setlayout(), 0;')
 If StringInStr($gReceivedData, 'ShowAddressbar=1') Then
   SendData("::focus 'A';")
   $_ = ControlGetFocus($gXyHandle)
@@ -145,7 +142,6 @@ Global $gActivePane = 0
 Global $gLastPane = -1
 Global $gLastPaneDim = 0
 Global $gPaneDim = -1
-Global $gInit = True
 
 ;==> main loop
 While True
@@ -155,7 +151,7 @@ While True
   If ControlGetFocus($gXyHandle) = $gClassAB Then ContinueLoop
   $gTriggerUpdate = False
   $gActivePane = 0
-  ; update if forced
+  ; update on config change
   If $gForceUpdate Then
     ConfigUpdate()
     $gTriggerUpdate = True
@@ -240,10 +236,9 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
     Pane1Width=456,Pane2Width=560,Pane1Height=246,Pane2Height=207,PreviewPaneWidth=280,
     InfoPanelHeight=196,InfoPanelHeightJump=0,LiveFilterInStatusBar=0
   #ce received data
+  ; note: $gActivePane seems more reliable than $layout['Pane']
   Local $layout = LayoutStrToArray($gReceivedData)
   $gReceivedData = Null
-  ; note: $gActivePane seems more reliable than $layout['Pane']
-
   If $layout['DP'] = 0 Or $layout['Toggle'] <> 1 Then
     ; Don't restore DP state
     If $gRestoreLayout And $gLastLayout <> Null Then
@@ -251,6 +246,7 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
     EndIf
     ExitApp()
   EndIf
+
   Local $execScript = "::setlayout('"
   $execScript &= 'ShowTree=1,ShowNav=1,'
 
@@ -325,6 +321,7 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
         "; restore last layout after stopping: 0=no, 1=yes" & @CRLF & _
         "RestoreLayout=1" & @CRLF & _
         "; also restore pane split and size (not reliable): 0=no, 1=yes" & @CRLF & _
+        "; ignored if RestoreLayout is disabled." & @CRLF & _
         "RestorePanes=0" & @CRLF & _
         "; activate dual panes if needed: 0=no, 1=yes" & @CRLF & _
         "; also auto-deactivates if activated by this setting." & @CRLF & _
@@ -335,7 +332,7 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
   ; update stored layout on config change
   If Not $gRestoreLayout Then
     $gLastLayout = Null
-  ElseIf $gInit And $gLastLayout = Null Then
+  Else
     $gLastLayout = StoreLayout()
   EndIf
   Return

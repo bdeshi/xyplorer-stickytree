@@ -91,6 +91,7 @@
   
   /* I. AM. SORRY. FOR. THIS. MESS. */
 
+  global $ot = 0; // marks if options touched by submenus.
   global $HorizontalListAlign = getkey("HorizontalListAlign", "Config", $ini);
   global $VerticalListCenter = getkey("VerticalListCenter", "Config", $ini);
   global $AutoDualPane = getkey("AutoDualPane", "Config", $ini);
@@ -104,19 +105,19 @@
   $RestorePanes = $RestorePanes != "" ? $RestorePanes : 1;
 
   $menu_vertlist_state       = $VerticalListCenter==1 ? 2 : '';
-  $menu_vertlist_cmd         = 'global $VerticalListCenter='.!$VerticalListCenter;
+  $menu_vertlist_cmd         = 'global $ot=1; global $VerticalListCenter='.!$VerticalListCenter;
   $menu_horizlist_1_state    = $HorizontalListAlign==0 ? 2 : '';
-  $menu_horizlist_1_cmd      = 'global $HorizontalListAlign=0';
+  $menu_horizlist_1_cmd      = 'global $ot=1; global $HorizontalListAlign=0';
   $menu_horizlist_2_state    = $HorizontalListAlign==1 ? 2 : '';
-  $menu_horizlist_2_cmd      = 'global $HorizontalListAlign=1';
+  $menu_horizlist_2_cmd      = 'global $ot=1; global $HorizontalListAlign=1';
   $menu_horizlist_3_state    = $HorizontalListAlign==-1 ? 2 : '';
-  $menu_horizlist_3_cmd      = 'global $HorizontalListAlign=-1';
+  $menu_horizlist_3_cmd      = 'global $ot=1; global $HorizontalListAlign=-1';
   $menu_autodp_state         = $AutoDualPane==1 ? 2 : '';
-  $menu_autodp_cmd           = 'global $AutoDualPane=1;';
+  $menu_autodp_cmd           = 'global $ot=1; global $AutoDualPane=1;';
   $menu_restore_layout_state = $RestoreLayout==1 ? 2 : '';
-  $menu_restore_layout_cmd   = 'global $RestoreLayout='.!$RestoreLayout;
+  $menu_restore_layout_cmd   = 'global $ot=1; global $RestoreLayout='.!$RestoreLayout;
   $menu_restore_pane_state   = $RestorePanes==1 ? 2 : '';
-  $menu_restore_pane_cmd     = 'global $RestorePanes='.!$RestorePanes;
+  $menu_restore_pane_cmd     = 'global $ot=1; global $RestorePanes='.!$RestorePanes;
 
   $menu = regexreplace(<<<#>>
   "Sticky Tree Settings||1|" end 1;
@@ -134,11 +135,13 @@
   #>>, '^\s+', '');
   load $menu,, 's';
 
-  setkey $HorizontalListAlign, "HorizontalListAlign", "Config", $ini;
-  setkey $VerticalListCenter, "VerticalListCenter", "Config", $ini;
-  setkey $AutoDualPane, "AutoDualPane", "Config", $ini;
-  setkey $RestoreLayout, "RestoreLayout", "Config", $ini;
-  setkey $RestorePanes, "RestorePanes", "Config", $ini;
+  if $ot = 1 {
+    setkey $HorizontalListAlign, "HorizontalListAlign", "Config", $ini;
+    setkey $VerticalListCenter, "VerticalListCenter", "Config", $ini;
+    setkey $AutoDualPane, "AutoDualPane", "Config", $ini;
+    setkey $RestoreLayout, "RestoreLayout", "Config", $ini;
+    setkey $RestorePanes, "RestorePanes", "Config", $ini;
+  }
 
   if ($P_STICKYTREE_TOGGLE == 1) && isset($P_STICKYTREE_HWND) {
     copydata $P_STICKYTREE_HWND, "CONF", 0;

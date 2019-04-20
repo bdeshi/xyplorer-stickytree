@@ -38,6 +38,7 @@
 Opt("WinWaitDelay", 10)
 
 If $CmdLine[0] < 1 Then Exit
+Global $gInit = False ; marker to tell if pre-main loop steps are done
 Global Const $gXyHandle = HWnd(Int($CmdLine[1]))
 Global Const $gCTBIndex = $CmdLine[0] > 1 ? Int($CmdLine[2]) : -1
 Global Const $gMyHandle = GUICreate('XYplorerStickyTree')
@@ -144,6 +145,7 @@ Global $gActivePane = 0
 Global $gLastPane = -1
 Global $gLastPaneDim = 0
 Global $gPaneDim = -1
+Global $gInit = True
 
 ;==> main loop
 While True
@@ -151,16 +153,11 @@ While True
   If Not WinActive($gXyHandle) Then ContinueLoop
   ; polling for focus when AB active interrupts AB dropdown
   If ControlGetFocus($gXyHandle) = $gClassAB Then ContinueLoop
-  ; update stored layout on config change
-  If Not $gRestoreLayout Then
-    $gLastLayout = Null
-  ElseIf $gLastLayout = Null Then
-    $gLastLayout = StoreLayout()
-  EndIf
   $gTriggerUpdate = False
   $gActivePane = 0
   ; update if forced
   If $gForceUpdate Then
+    ConfigUpdate()
     $gTriggerUpdate = True
     $gForceUpdate = False
   EndIf
@@ -335,6 +332,12 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
         )
     FileClose($hIni)
   EndIf
+  ; update stored layout on config change
+  If Not $gRestoreLayout Then
+    $gLastLayout = Null
+  ElseIf $gInit And $gLastLayout = Null Then
+    $gLastLayout = StoreLayout()
+  EndIf
   Return
 EndFunc   ;==>ConfigUpdate
 
@@ -396,7 +399,6 @@ Func ReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get WM_COPYDATA from Xy
     Case "QUIT"
       ExitApp()
     Case "CONF"
-      ConfigUpdate()
       $gForceUpdate = True
   EndSwitch
   Return True

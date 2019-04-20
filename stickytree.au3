@@ -78,15 +78,24 @@ If Not $gThreadAttached Then Exit
 
 ; read config
 Global $gHorizontalListAlign, $gVerticalListCenter, $gRestoreLayout, $gRestorePanes
-GetConfig()
+Global $gAutoDualPane, $gPersist
+ConfigUpdate()
 
 ; make sure only one copy is running
 SendReceive("::copydata " & $gMyHandle & ", isset($P_STICKYTREE_HWND), 0;")
 If Int($gReceivedData) Then Exit
 
 ; stop if dual pane disabled
+Global $gDualPaneActivated = False
 SendReceive("::copydata " & $gMyHandle & ", get('#800'), 0;")
-If Not Int($gReceivedData) Then Exit
+If Not Int($gReceivedData) Then
+  If $gAutoDualPane Then
+    SendData("::#800;")
+    $gDualPaneActivated = True
+  Else
+    Exit
+  EndIf
+EndIf
 
 ; push own hwnd to xy permavar
 SendData("::perm $P_STICKYTREE_HWND=" & $gMyHandle & ";")
@@ -130,6 +139,7 @@ EndIf
 
 ;==> main loop vars
 Global $gTriggerUpdate = False
+Global $gForceUpdate = False
 Global $gActivePane = 0
 Global $gLastPane = -1
 Global $gLastPaneDim = 0
@@ -141,8 +151,19 @@ While True
   If Not WinActive($gXyHandle) Then ContinueLoop
   ; polling for focus when AB active interrupts AB dropdown
   If ControlGetFocus($gXyHandle) = $gClassAB Then ContinueLoop
+  ; update stored layout on config change
+  If Not $gRestoreLayout Then
+    $gLastLayout = Null
+  ElseIf $gLastLayout = Null Then
+    $gLastLayout = StoreLayout()
+  EndIf
   $gTriggerUpdate = False
   $gActivePane = 0
+  ; update if forced
+  If $gForceUpdate Then
+    $gTriggerUpdate = True
+    $gForceUpdate = False
+  EndIf
   ; activepane is used in layoutupdater so must be always up-do-date
   Switch ControlGetFocus($gXyHandle)
     Case $gClassP1
@@ -203,6 +224,9 @@ Func ExitApp()
         ',Pane2Height=' & $gLastLayout['Pane2Height'] _
         ) & _
         '");'
+  EndIf
+  If $gAutoDualPane And $gDualPaneActivated Then
+    $execScript &= 'setlayout("DP=0");'
   EndIf
   SendData($execScript)
   Exit
@@ -285,7 +309,7 @@ Func LayoutStrToArray($layoutStr)  ;==> Converts layout info in $gReceivedData t
   Return $mLayout
 EndFunc   ;==>LayoutStrToArray
 
-Func GetConfig()  ;==> Get/Update settings from Ini
+Func ConfigUpdate()  ;==> Get/Update settings from Ini
   Local $Ini = StringRegExpReplace(@ScriptDir, '[/\\]$', '') & "\stickytree.ini"
   $gHorizontalListAlign = Int(IniRead($Ini, "Config", "HorizontalListAlign", -1))
   $gVerticalListCenter = Int(IniRead($Ini, "Config", "VerticalListCenter", 1))
@@ -368,6 +392,12 @@ Func ReceiveData($_hWnd, $_msg, $wParam, $lParam) ;==> get WM_COPYDATA from Xy
     $gReceivedData = DllStructGetData($dataStruct, 'data')
     If ($dataSize = 0) Then $gReceivedData = ''
   EndIf
-  If $gReceivedData = "QUIT" Then ExitApp()
+  Switch $gReceivedData
+    Case "QUIT"
+      ExitApp()
+    Case "CONF"
+      ConfigUpdate()
+      $gForceUpdate = True
+  EndSwitch
   Return True
 EndFunc   ;==>ReceiveData

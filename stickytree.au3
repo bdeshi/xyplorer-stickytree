@@ -17,7 +17,7 @@
   #AutoIt3Wrapper_Compression=4
   #AutoIt3Wrapper_UseX64=n
   #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
-  #AutoIt3Wrapper_Res_Fileversion=1.0.1.0
+  #AutoIt3Wrapper_Res_Fileversion=1.0.6.0
   #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=P
   #AutoIt3Wrapper_Res_Fileversion_First_Increment=Y
   #AutoIt3Wrapper_AU3Check_Parameters=-d -w 4 -w 5 -w 6

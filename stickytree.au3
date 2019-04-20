@@ -340,6 +340,8 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
     $gLastLayout = StoreLayout()
   EndIf
   Return
+  ; forget dualpanes activation state if autodualpanes disabled
+  If Not $gAutoDualPane Then $gDualPaneActivated = False
 EndFunc   ;==>ConfigUpdate
 
 Func StoreLayout()  ;==> remember current layout for restoring

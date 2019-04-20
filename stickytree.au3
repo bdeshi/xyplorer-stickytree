@@ -17,7 +17,7 @@
   #AutoIt3Wrapper_Compression=4
   #AutoIt3Wrapper_UseX64=n
   #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
-  #AutoIt3Wrapper_Res_Fileversion=1.0.6.0
+  #AutoIt3Wrapper_Res_Fileversion=1.1.0.0
   #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=P
   #AutoIt3Wrapper_Res_Fileversion_First_Increment=Y
   #AutoIt3Wrapper_AU3Check_Parameters=-d -w 4 -w 5 -w 6
@@ -69,7 +69,7 @@ Global $_ = Null
 
 ; config vars
 Global $gHorizontalListAlign, $gVerticalListCenter, $gRestoreLayout
-Global $gRestorePanes, $gAutoDualPane
+Global $gRestorePanes, $gAutoDualPane, $gPersist
 
 #cs
 ControlGetFocus() can interfere with [mouse] input
@@ -95,8 +95,8 @@ If Not Int($gReceivedData) Then
   If $gAutoDualPane Then
     SendData("::#800;")
     $gDualPaneActivated = True
-  Else
-    Exit
+  ElseIf Not $gPersist Then
+    ExitApp()
   EndIf
 EndIf
 
@@ -156,6 +156,13 @@ While True
     ConfigUpdate()
     $gTriggerUpdate = True
     $gForceUpdate = False
+  EndIf
+  If Not DualPanesActive() Then
+    If $gPersist Then
+      ContinueLoop
+    Else
+      ExitApp()
+    EndIf
   EndIf
   ; activepane is used in layoutupdater so must be always up-do-date
   Switch ControlGetFocus($gXyHandle)
@@ -239,13 +246,9 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
   ; note: $gActivePane seems more reliable than $layout['Pane']
   Local $layout = LayoutStrToArray($gReceivedData)
   $gReceivedData = Null
-  If $layout['DP'] = 0 Or $layout['Toggle'] <> 1 Then
-    ; Don't restore DP state
-    If $gRestoreLayout And $gLastLayout <> Null Then
-      $gLastLayout['DP'] = $layout['DP']
-    EndIf
-    ExitApp()
-  EndIf
+  If $layout['Toggle'] <> 1 Then ExitApp()
+  If $layout['DP'] = 0 And Not $gPersist Then ExitApp()
+  If $layout['DP'] = 0 And $gPersist Then Return True
 
   Local $execScript = "::setlayout('"
   $execScript &= 'ShowTree=1,ShowNav=1,'
@@ -309,6 +312,7 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
   $gRestoreLayout = Int(IniRead($Ini, "Config", "RestoreLayout", 1))
   $gRestorePanes = Int(IniRead($Ini, "Config", "RestorePanes", 0))
   $gAutoDualPane = Int(IniRead($Ini, "Config", "AutoDualPane", 1))
+  $gPersist = Int(IniRead($Ini, "Config", "Persist", 0))
   If Not FileExists($Ini) Then
     Local $hIni = FileOpen($Ini, 2)
     FileWrite($hIni, _
@@ -324,10 +328,20 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
         "; ignored if RestoreLayout is disabled." & @CRLF & _
         "RestorePanes=0" & @CRLF & _
         "; activate dual panes if needed: 0=no, 1=yes" & @CRLF & _
-        "; also auto-deactivates if activated by this setting." & @CRLF & _
-        "AutoDualPane=1" & @CRLF _
+        "; also auto-deactivates if DP was activated by this setting." & @CRLF & _
+        "AutoDualPane=1" & @CRLF & _
+        "; persistence: 0=on, 1=off" & @CRLF & _
+        "; stays alive if DP disabled and re-applies when DP is enabled." & @CRLF & _
+        "; restoration settings are ignored when persistence is enabled." & @CRLF & _
+        "Persist=0" & @CRLF _
         )
     FileClose($hIni)
+  EndIf
+  ; reset layout variables if persistence enabled
+  If $gPersist Then
+    $gAutoDualPane = False
+    $gRestoreLayout = False
+    $gRestorePanes = False
   EndIf
   ; update stored layout on config change
   If Not $gRestoreLayout Then
@@ -355,6 +369,12 @@ Func GetPaneDim($class)  ;==> Return a hash of pane positions
   $sPos = StringTrimLeft($sPos, 1)
   Return $sPos
 EndFunc   ;==>GetPaneDim
+
+Func DualPanesActive()
+  If Not WinExists($gXyHandle) Then Exit
+  Return ControlCommand($gXyHandle, '', "[CLASSNN:" & $gClassP1 & "]", "IsVisible", "") _
+    And ControlCommand($gXyHandle, '', "[CLASSNN:" & $gClassP2 & "]", "IsVisible", "")
+EndFunc
 
 Func SendReceive($str)  ;==> Send Data and wait until some data received
   $gReceivedData = Null

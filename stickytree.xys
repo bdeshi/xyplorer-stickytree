@@ -102,7 +102,7 @@
   $VerticalListCenter = $VerticalListCenter != "" ? $VerticalListCenter : 1;
   $AutoDualPane = $AutoDualPane != "" ? $AutoDualPane : 1;
   $RestoreLayout = $RestoreLayout != "" ? $RestoreLayout : 1;
-  $RestorePanes = $RestorePanes != "" ? $RestorePanes : 1;
+  $RestorePanes = $RestorePanes != "" ? $RestorePanes : 0;
 
   $menu_vertlist_state       = $VerticalListCenter==1 ? 2 : '';
   $menu_vertlist_cmd         = 'global $ot=1; global $VerticalListCenter='.!$VerticalListCenter;

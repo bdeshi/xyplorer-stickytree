@@ -116,7 +116,7 @@
   $menu_restore_layout_state = $RestoreLayout==1 ? 2 : '';
   $menu_restore_layout_cmd   = 'global $RestoreLayout='.!$RestoreLayout;
   $menu_restore_pane_state   = $RestorePanes==1 ? 2 : '';
-  $menu_restore_pane_cmd     = 'global $RestorePanes='.!$Restorepanes;
+  $menu_restore_pane_cmd     = 'global $RestorePanes='.!$RestorePanes;
 
   $menu = regexreplace(<<<#>>
   "Sticky Tree Settings||1|" end 1;

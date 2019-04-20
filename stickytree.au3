@@ -311,7 +311,7 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
   $gHorizontalListAlign = Int(IniRead($Ini, "Config", "HorizontalListAlign", -1))
   $gVerticalListCenter = Int(IniRead($Ini, "Config", "VerticalListCenter", 1))
   $gRestoreLayout = Int(IniRead($Ini, "Config", "RestoreLayout", 1))
-  $gRestorePanes = Int(IniRead($Ini, "Config", "RestorePanes", 1))
+  $gRestorePanes = Int(IniRead($Ini, "Config", "RestorePanes", 0))
   $gAutoDualPane = Int(IniRead($Ini, "Config", "AutoDualPane", 1))
   $gPersist = Int(IniRead($Ini, "Config", "Persist", 1)) ; no-op
   If Not FileExists($Ini) Then
@@ -321,13 +321,14 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
         "; list position in horizontal split: -1=manual, 0=left, 1=right" & @CRLF & _
         "HorizontalListAlign=-1" & @CRLF & _
         "; list position in vertical split: 0=manual, 1=center" & @CRLF & _
+        "; manual mode allows nav panels to be stacked." & @CRLF & _
         "VerticalListCenter=1" & @CRLF & _
         "; restore last layout after stopping: 0=no, 1=yes" & @CRLF & _
         "RestoreLayout=1" & @CRLF & _
-        "; restore pane split and size as well: 0=no, 1=yes" & @CRLF & _
-        "RestorePanes=1" & @CRLF & _
+        "; also restore pane split and size (not reliable): 0=no, 1=yes" & @CRLF & _
+        "RestorePanes=0" & @CRLF & _
         "; activate dual panes if needed: 0=no, 1=yes" & @CRLF & _
-        "; also gets disabled at stop if it was auto-enabled." & @CRLF & _
+        "; also auto-deactivates if activated by this setting." & @CRLF & _
         "AutoDualPane=1" & @CRLF _
         )
     FileClose($hIni)

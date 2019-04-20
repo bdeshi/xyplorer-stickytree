@@ -113,7 +113,7 @@
   $menu_horizlist_3_state    = $HorizontalListAlign==-1 ? 2 : '';
   $menu_horizlist_3_cmd      = 'global $ot=1; global $HorizontalListAlign=-1';
   $menu_autodp_state         = $AutoDualPane==1 ? 2 : '';
-  $menu_autodp_cmd           = 'global $ot=1; global $AutoDualPane=1;';
+  $menu_autodp_cmd           = 'global $ot=1; global $AutoDualPane='.!$AutoDualPane;
   $menu_restore_layout_state = $RestoreLayout==1 ? 2 : '';
   $menu_restore_layout_cmd   = 'global $ot=1; global $RestoreLayout='.!$RestoreLayout;
   $menu_restore_pane_state   = $RestorePanes==1 ? 2 : '';

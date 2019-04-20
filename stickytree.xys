@@ -122,12 +122,12 @@
   $menu = regexreplace(<<<#>>
   "Sticky Tree Settings||1|" end 1;
   "-"
+  "Auto &Dual Panes|:dp2|$menu_autodp_state|" $menu_autodp_cmd
   "&Center List Vertically|:dpv|$menu_vertlist_state|" $menu_vertlist_cmd
   "Align &Horizontal List|:dph||"
   "&Left||$menu_horizlist_1_state|+1" $menu_horizlist_1_cmd
   "&Right||$menu_horizlist_2_state|+1" $menu_horizlist_2_cmd
   "&Manual||$menu_horizlist_3_state|+1" $menu_horizlist_3_cmd
-  "Auto &Dual Panes|:dp2|$menu_autodp_state|" $menu_autodp_cmd
   "&Restore...|:autorefresh||"
   "&Layout||$menu_restore_layout_state|+1" $menu_restore_layout_cmd
   "&Pane sizes||$menu_restore_pane_state|+1" $menu_restore_pane_cmd

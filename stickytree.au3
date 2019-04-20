@@ -79,7 +79,7 @@ If Not $gThreadAttached Then Exit
 
 ; read config
 Global $gHorizontalListAlign, $gVerticalListCenter, $gRestoreLayout, $gRestorePanes
-Global $gAutoDualPane, $gPersist
+Global $gAutoDualPane
 ConfigUpdate()
 
 ; make sure only one copy is running
@@ -313,7 +313,6 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
   $gRestoreLayout = Int(IniRead($Ini, "Config", "RestoreLayout", 1))
   $gRestorePanes = Int(IniRead($Ini, "Config", "RestorePanes", 0))
   $gAutoDualPane = Int(IniRead($Ini, "Config", "AutoDualPane", 1))
-  $gPersist = Int(IniRead($Ini, "Config", "Persist", 1)) ; no-op
   If Not FileExists($Ini) Then
     Local $hIni = FileOpen($Ini, 2)
     FileWrite($hIni, _

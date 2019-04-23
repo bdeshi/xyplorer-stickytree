@@ -99,7 +99,7 @@
   global $RestorePanes = getkey("RestorePanes", "Config", $ini);
   global $Persist = getkey("Persist", "Config", $ini);
 
-  $HorizontalListAlign = $HorizontalListAlign != "" ? $HorizontalListAlign : -1;
+  $HorizontalListAlign = $HorizontalListAlign != "" ? $HorizontalListAlign : 1;
   $VerticalListCenter = $VerticalListCenter != "" ? $VerticalListCenter : 1;
   $AutoDualPane = $AutoDualPane != "" ? $AutoDualPane : 1;
   $RestoreLayout = $RestoreLayout != "" ? $RestoreLayout : 1;
@@ -112,8 +112,6 @@
   $menu_horizlist_1_cmd      = 'global $ot=1; global $HorizontalListAlign=0';
   $menu_horizlist_2_state    = $HorizontalListAlign==1 ? 2 : '';
   $menu_horizlist_2_cmd      = 'global $ot=1; global $HorizontalListAlign=1';
-  $menu_horizlist_3_state    = $HorizontalListAlign==-1 ? 2 : '';
-  $menu_horizlist_3_cmd      = 'global $ot=1; global $HorizontalListAlign=-1';
   $menu_autodp_state         = $AutoDualPane==1 ? 2 : '';
   $menu_autodp_cmd           = 'global $ot=1; global $AutoDualPane='.!$AutoDualPane;
   $menu_restore_layout_state = $RestoreLayout==1 ? 2 : '';
@@ -131,11 +129,11 @@
   "Align &Horizontal List|:dph||"
   "&Left||$menu_horizlist_1_state|+1" $menu_horizlist_1_cmd
   "&Right||$menu_horizlist_2_state|+1" $menu_horizlist_2_cmd
-  "&Manual||$menu_horizlist_3_state|+1" $menu_horizlist_3_cmd
   "&Restore...|:autorefresh||"
   "&Layout||$menu_restore_layout_state|+1" $menu_restore_layout_cmd
   "&Pane sizes||$menu_restore_pane_state|+1" $menu_restore_pane_cmd
   "&Persist|:sticky|$menu_persist_state|" $menu_persist_cmd
+  "-"
   "&Open configuration|*.ini||" open "$ini"
   #>>, '^\s+', '');
   load $menu,, 's';

@@ -371,21 +371,21 @@ Func GetPaneDims()  ;==> Return a hash of pane positions
   Local $sPos = ""
   Local $aPos = ControlGetPos($gXyHandle, '', "[CLASSNN:" & $gClassP1 & "]")
   For $iValue In ControlGetPos($gXyHandle, '', "[CLASSNN:" & $gClassP2 & "]")
-    ReDim $aPos[UBound($aPos)+1]
-    $aPos[UBound($aPos)-1] = $iValue
+    ReDim $aPos[UBound($aPos) + 1]
+    $aPos[UBound($aPos) - 1] = $iValue
   Next
   For $iValue In $aPos
     $sPos &= "," & String($iValue)
   Next
   $sPos = StringTrimLeft($sPos, 1)
   Return $sPos
-EndFunc   ;==>GetPaneDim
+EndFunc   ;==>GetPaneDims
 
 Func DualPanesActive()
   If Not WinExists($gXyHandle) Then Exit
   Return ControlCommand($gXyHandle, '', "[CLASSNN:" & $gClassP1 & "]", "IsVisible", "") _
-    And ControlCommand($gXyHandle, '', "[CLASSNN:" & $gClassP2 & "]", "IsVisible", "")
-EndFunc
+      And ControlCommand($gXyHandle, '', "[CLASSNN:" & $gClassP2 & "]", "IsVisible", "")
+EndFunc   ;==>DualPanesActive
 
 Func SendReceive($str)  ;==> Send Data and wait until some data received
   $gReceivedData = Null

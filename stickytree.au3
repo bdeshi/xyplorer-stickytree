@@ -329,16 +329,17 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
         "; manual mode allows nav panels to be stacked." & @CRLF & _
         "VerticalListCenter=1" & @CRLF & _
         "; restore last layout after stopping: 0=no, 1=yes" & @CRLF & _
+        "; saved layout is refreshed if this option is toggled during runtime." & @CRLF & _
         "RestoreLayout=1" & @CRLF & _
-        "; also restore pane split and size (not reliable): 0=no, 1=yes" & @CRLF & _
+        "; restore pane split and size (not reliable): 0=no, 1=yes" & @CRLF & _
         "; ignored if RestoreLayout is disabled." & @CRLF & _
         "RestorePanes=0" & @CRLF & _
         "; activate dual panes if needed: 0=no, 1=yes" & @CRLF & _
-        "; also auto-deactivates if DP was activated by this setting." & @CRLF & _
+        "; DP is also auto-deactivated if it was activated by this setting." & @CRLF & _
         "AutoDualPane=1" & @CRLF & _
         "; persistence: 0=on, 1=off" & @CRLF & _
-        "; stays alive if DP disabled and re-applies when DP is enabled." & @CRLF & _
-        "; restoration settings are ignored when persistence is enabled." & @CRLF & _
+        "; start passively if enabled. activates if DP enabled, drops to bg otherwise." & @CRLF & _
+        "; autodualpane & restore options are discarded when persistence is enabled." & @CRLF & _
         "Persist=0" & @CRLF _
         )
     FileClose($hIni)

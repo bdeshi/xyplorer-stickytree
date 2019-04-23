@@ -175,7 +175,7 @@ While True
   EndIf
   ; update layout on pane size change
   If Not $gTriggerUpdate Then
-    $gPaneDim = GetPaneDim($gClassP1) & "," & GetPaneDim($gClassP2)
+    $gPaneDim = GetPaneDims()
     If $gPaneDim <> $gLastPaneDim Then
       $gLastPaneDim = $gPaneDim
       $gTriggerUpdate = True
@@ -348,12 +348,16 @@ Func StoreLayout()  ;==> remember current layout for restoring
   Return LayoutStrToArray($gReceivedData)
 EndFunc   ;==>StoreLayout
 
-Func GetPaneDim($class)  ;==> Return a hash of pane positions
+Func GetPaneDims()  ;==> Return a hash of pane positions
   If Not WinExists($gXyHandle) Then Exit ; MAGIC to stop orphan process bug. why here? I don't know
   Local $sPos = ""
-  Local $aPos = ControlGetPos($gXyHandle, '', "[CLASSNN:" & $class & "]")
-  For $iData In $aPos
-    $sPos &= "," & String($iData)
+  Local $aPos = ControlGetPos($gXyHandle, '', "[CLASSNN:" & $gClassP1 & "]")
+  For $iValue In ControlGetPos($gXyHandle, '', "[CLASSNN:" & $gClassP2 & "]")
+    ReDim $aPos[UBound($aPos)+1]
+    $aPos[UBound($aPos)-1] = $iValue
+  Next
+  For $iValue In $aPos
+    $sPos &= "," & String($iValue)
   Next
   $sPos = StringTrimLeft($sPos, 1)
   Return $sPos

@@ -64,12 +64,15 @@ Global Const $gGetLayoutScript = "::copydata " & $gMyHandle & ', "' & _
     "TBHeight="" . gettoken(controlposition('TAB 1'), 4, '|') . "","" . " & _
     "setlayout(), 0;"
 Global $gReceivedData = Null
-Global $gLastLayout = Null
 Global $_ = Null
 
 ; config vars
 Global $gHorizontalListAlign, $gVerticalListCenter, $gRestoreLayout
 Global $gRestorePanes, $gAutoDualPane, $gPersist
+; config-dependent vars
+Global $gDualPaneActivated = False
+Global $gLastLayout = Null
+Global $gForceUpdate = False
 
 #cs
 ControlGetFocus() can interfere with [mouse] input
@@ -89,7 +92,6 @@ If Int($gReceivedData) Then Exit
 ConfigUpdate()
 
 ; stop if dual pane disabled
-Global $gDualPaneActivated = False
 SendReceive("::copydata " & $gMyHandle & ", get('#800'), 0;")
 If Not Int($gReceivedData) Then
   If $gAutoDualPane Then
@@ -137,7 +139,6 @@ EndIf
 
 ;==> main loop vars
 Global $gTriggerUpdate = False
-Global $gForceUpdate = False
 Global $gActivePane = 0
 Global $gLastPane = -1
 Global $gLastPaneDim = 0
@@ -247,8 +248,13 @@ Func ProcessReceivedData()  ;==> update layout based on $gReceivedData
   Local $layout = LayoutStrToArray($gReceivedData)
   $gReceivedData = Null
   If $layout['Toggle'] <> 1 Then ExitApp()
-  If $layout['DP'] = 0 And Not $gPersist Then ExitApp()
-  If $layout['DP'] = 0 And $gPersist Then Return True
+  If $layout['DP'] = 0 Then
+    If Not $gPersist Then
+      ExitApp()
+    Else
+      Return True
+    EndIf
+  EndIf
 
   Local $execScript = "::setlayout('"
   $execScript &= 'ShowTree=1,ShowNav=1,'

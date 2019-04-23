@@ -308,7 +308,7 @@ EndFunc   ;==>LayoutStrToArray
 
 Func ConfigUpdate()  ;==> Get/Update settings from Ini
   Local $Ini = StringRegExpReplace(@ScriptDir, '[/\\]$', '') & "\stickytree.ini"
-  $gHorizontalListAlign = Int(IniRead($Ini, "Config", "HorizontalListAlign", -1))
+  $gHorizontalListAlign = Int(IniRead($Ini, "Config", "HorizontalListAlign", 1))
   $gVerticalListCenter = Int(IniRead($Ini, "Config", "VerticalListCenter", 1))
   $gRestoreLayout = Int(IniRead($Ini, "Config", "RestoreLayout", 1))
   $gRestorePanes = Int(IniRead($Ini, "Config", "RestorePanes", 0))
@@ -317,8 +317,8 @@ Func ConfigUpdate()  ;==> Get/Update settings from Ini
     Local $hIni = FileOpen($Ini, 2)
     FileWrite($hIni, _
         "[Config]" & @CRLF & _
-        "; list position in horizontal split: -1=manual, 0=left, 1=right" & @CRLF & _
-        "HorizontalListAlign=-1" & @CRLF & _
+        "; list position in horizontal split: 0=left, 1=right" & @CRLF & _
+        "HorizontalListAlign=1" & @CRLF & _
         "; list position in vertical split: 0=manual, 1=center" & @CRLF & _
         "; manual mode allows nav panels to be stacked." & @CRLF & _
         "VerticalListCenter=1" & @CRLF & _

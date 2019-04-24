@@ -17,7 +17,7 @@
   #AutoIt3Wrapper_Compression=4
   #AutoIt3Wrapper_UseX64=n
   #AutoIt3Wrapper_Res_Description=XYplorerStickyTree
-  #AutoIt3Wrapper_Res_Fileversion=1.1.0.0
+  #AutoIt3Wrapper_Res_Fileversion=1.1.1.0
   #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=P
   #AutoIt3Wrapper_Res_Fileversion_First_Increment=Y
   #AutoIt3Wrapper_AU3Check_Parameters=-d -w 4 -w 5 -w 6
@@ -180,7 +180,7 @@ While True
   ; update layout on pane size change
   If Not $gTriggerUpdate Then
     $gPaneDim = GetPaneDims()
-    If $gPaneDim <> $gLastPaneDim Then
+    If Not ($gPaneDim == $gLastPaneDim) Then
       $gLastPaneDim = $gPaneDim
       $gTriggerUpdate = True
     EndIf
